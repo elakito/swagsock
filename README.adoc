@@ -1,0 +1,91 @@
+== Websocket binding for REST
+
+This libary can be used to add the Websocket protocol transparently to the exisitng REST services.
+As a result, these services can be invoked as usual using HTTP or using Websocket.
+
+=== Default Binding
+This default binding is originated from SwaggerSocket[1] and based on the protocol extension
+(org.atmosphere.interceptor.SimpleRestInterceptor) included in Atmosphere 2.4.4[2] to enable arbitrary REST services to be invoked using Websocket.
+
+This binding has the following characteristics.
+
+- Each request contains the method, path, and optional type and data.
+- Each request may be sent with a unique-ID for the client to correlate responses to its requests.
+- The content-type header can be optionally supplied if the content is present.
+- The accept header can be optionally supplied if the response is expected.
+- Arbitrary Http headers are supported, but they may be omitted if thet are not part of the application semantics.
+- The content entity can be optionally supplied following the envelope.
+- A large message can be transported as a series of messages that can be reassembled at the receiving end.
+- The server can periodically send a heartbeat message to the connected clients to keep the connections alive.
+
+The following message format is used for this binding. Each message is represented as a text or binary Websocket message.
+It consists of the headers part encoded in json and the optional content part which follows the headers part.
+
+[caption="Format: "]
+.General Syntax
+====
+{"id": "*_identifier_*", "code": *_status_code_*, "method": "*_method_*", "path": "*_path_*",
+ "type": "*_type_value_*", "accept": "*_accept_value_*", "headers": "*_headers_map_*"
+ "continue": *_continue_*}
+*_content_*
+====
+where
+
+      - *_identifier_* represents an identifier for the request message which is used in any response message to refer to the original request message,
+
+      - *_status_code_* represents the status code of the response message.
+
+      - *_method_* represents the request method,
+
+      - *_path_* represents the request path,
+
+      - *_type_* and *_accept_* represent the optional content-type and accept header values.
+
+      - *_headers_map_* represents the optional headers other than content-type and accept headers.
+
+      - *_content_* represents the optional content entity.
+
+      - *_continue_* represents the optional boolean value which indicates the message continues, in other words, followed by another message.
+
+===== Examples
+
+
+.A GET request to path /foo
+====
+{"id": "123", "method": "GET", "path": "/foo"}
+====
+
+.A POST request to path /foo with text content "Hello World!"
+====
+{"id": "124", "method": "POST", "path": "/foo", "type": "text/plain"} +
+Hello World!
+====
+
+.A POST request to path /foo with text content "Buenos Dias!" and header "X-Language" set to "es"
+====
+{"id": "125", "method": "POST", "path": "/foo", "type": "text/plain", "headers": {"X-Language": "es"}} +
+Buenos Dias
+====
+
+.A response with content "Hello World!"
+====
+{"id": "123", "code": 200} +
+Hello World!
+====
+
+.A response with large content "From a ...... to z" split in two responses
+====
+{"id": "124", "code": 200, "continue": true} +
+From a ...
+====
+====
+{"id": "124", "code": 200} +
+... to z
+====
+
+
+==== References
+
+- [1] https://github.com/swagger-api/swagger-socket[]
+
+- [2] https://github.com/Atmosphere/atmosphere[]

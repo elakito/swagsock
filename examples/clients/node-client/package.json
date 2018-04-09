@@ -1,0 +1,7 @@
+{
+  "name": "greeterDemo",
+  "version": "0.0.1",
+  "dependencies": {
+    "atmosphere.js": "^2.3.0"
+  }
+}

@@ -1,0 +1,213 @@
+---
+swagger: "2.0"
+info:
+  description: "This is a greeter demo."
+  version: "1.0.0"
+  title: "greeter demo API"
+  termsOfService: "http://www.github.com/elakito/swaggersocket/"
+  license:
+    name: "Apache 2.0"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+basePath: "/samples/greeter"
+schemes:
+- "http"
+- "https"
+paths:
+  /v1/echo:
+    post:
+      summary: "Echo back the message"
+      description: "Echo back the message"
+      operationId: "echo"
+      consumes:
+      - "text/plain"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "A message"
+        required: true
+        schema:
+          type: "string"
+      responses:
+        200:
+          description: "Returns an echo message"
+          schema:
+            $ref: "#/definitions/echoReply"
+  /v1/greet:
+    get:
+      summary: "Show who has been greeted"
+      description: "Show who has been greeted"
+      operationId: "getGreetSummary"
+      produces:
+      - "application/json"
+      parameters: []
+      responses:
+        200:
+          description: "Greeting summary"
+          schema:
+            $ref: "#/definitions/greetingSummary"
+  /v1/greet/{name}:
+    get:
+      summary: "Show when the person was greeted last"
+      description: "Show when the person was last greeted"
+      operationId: "getGreetStatus"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "greeting name"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Greeting status"
+          schema:
+            $ref: "#/definitions/greetingStatus"
+    post:
+      summary: "Greet someone"
+      description: "Greet someone"
+      operationId: "greet"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "greeting name"
+        required: true
+        type: "string"
+      - in: "body"
+        name: "body"
+        description: "A greeting message"
+        required: true
+        schema:
+          $ref: "#/definitions/body"
+      responses:
+        200:
+          description: "A greeting response"
+          schema:
+            $ref: "#/definitions/greetingReply"
+  /v1/greet/{name}/upload:
+    post:
+      summary: "Upload a greeting card"
+      description: "Upload a greeting card"
+      operationId: "upload"
+      consumes:
+      - "multipart/form-data"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "name"
+        in: "path"
+        description: "greeting name"
+        required: true
+        type: "string"
+      - name: "file"
+        in: "formData"
+        description: "greeting card file to upload"
+        required: false
+        type: "file"
+      responses:
+        200:
+          description: "Upload status"
+          schema:
+            $ref: "#/definitions/uploadStatus"
+        500:
+          description: "Storage Full"
+          schema:
+            type: "string"
+  /v1/ping:
+    get:
+      summary: "Ping the greeter service"
+      description: "Ping the greeter service"
+      operationId: "ping"
+      produces:
+      - "application/json"
+      parameters: []
+      responses:
+        200:
+          description: "Returns a pong"
+          schema:
+            $ref: "#/definitions/pong"
+securityDefinitions:
+  UserSecurity:
+    type: "basic"
+definitions:
+  echoReply:
+    type: "object"
+    properties:
+      echo:
+        type: "string"
+        description: "echo"
+  greeting:
+    type: "object"
+    properties:
+      name:
+        type: "string"
+        description: "greeting person"
+      text:
+        type: "string"
+        description: "greeting text"
+  greetingReply:
+    type: "object"
+    properties:
+      from:
+        type: "string"
+        description: "greeting person"
+      name:
+        type: "string"
+        description: "greeted person"
+      text:
+        type: "string"
+        description: "greeting reply text"
+  greetingStatus:
+    type: "object"
+    properties:
+      count:
+        type: "integer"
+        format: "int32"
+        description: "greeting count"
+      name:
+        type: "string"
+        description: "greeted person"
+  greetingSummary:
+    type: "object"
+    properties:
+      greeted:
+        type: "array"
+        description: "greeted persons"
+        items:
+          type: "string"
+      total:
+        type: "integer"
+        format: "int32"
+        description: "total greeting count"
+  pong:
+    type: "object"
+    properties:
+      pong:
+        type: "integer"
+        format: "int32"
+        description: "pong counter"
+  uploadStatus:
+    type: "object"
+    properties:
+      name:
+        type: "string"
+        description: "greeting name"
+      size:
+        type: "integer"
+        format: "int32"
+        description: "greeting card size"
+  body:
+    type: "object"
+    properties:
+      name:
+        type: "string"
+        description: "greeting person"
+      text:
+        type: "string"
+        description: "greeting text"
