@@ -47,7 +47,7 @@ where
 
       - *_continue_* represents the optional boolean value which indicates the message continues, in other words, followed by another message.
 
-===== Examples
+===== Message Examples
 
 
 .A GET request to path /foo
@@ -82,6 +82,15 @@ From a ...
 {"id": "124", "code": 200} +
 ... to z
 ====
+
+
+==== Samples
+ * https://github.com/elakito/swagsock/tree/master/examples/greeter[examples/greeter]
+  - This server is generated from examples/greeter/swagger.yaml using go-swagger and it is enabled for websocket
+
+ * https://github.com/elakito/swagsock/tree/master/examples/clients/node-client[examples/clients/node-client]
+  - A node.js client based on atmosphere.js to call the greeter service.
+
 
 
 ==== References

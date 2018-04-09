@@ -1,4 +1,4 @@
-==== greeter server side code
+==== greeter server
 
 This greeter server is a REST server that transparently supports the Websocket
 protocol. This Websocket binding is originated from Atmosphere's websocket binding [1],
@@ -6,25 +6,28 @@ which in turn is originated from SwaggerSocket[2].
 
 This binding can be considered as a simplified yet more efficient and flexible version of its predecessor.
 
-The server side code has been generated from the provided swagger.yaml by
+The server side code has been generated from the included https://raw.githubusercontent.com/elakito/swagsock/master/examples/greeter/swagger.yaml[swagger.yaml] using go swagger (version 0.13.0) by
 ----
 $ swagger generate server -f swagger.yaml -A greeter-demo
 ----
 
 
 ===== Run
-To start the server at http port 8091 and https port 8495, run
+To start this server at http port 8091 and https port 8495, run
 ----
 $ go run cmd/greeter-demo-server/main.go --port 8091 --tls-port 8495 --tls-certificate certs/localhost.crt --tls-key certs/localhost.key
 ----
 
+.Console
+----
 $ go run cmd/greeter-demo-server/main.go --port 8091 --tls-port 8495 --tls-certificate certs/localhost.crt --tls-key certs/localhost.key
 2018/04/07 09:26:47 Serving greeter demo at http://127.0.0.1:8091
 2018/04/07 09:26:47 Serving greeter demo at https://127.0.0.1:8495
+----
 
 and open the page http://localhost:8091/swagger.json to view its swagger document.
 
-To try out its Websocket protocol, run the node client located in examples/clients/node-client/.
+To try out its Websocket protocol support, run the node client located in https://github.com/elakito/swagsock/tree/master/examples/clients/node-client[examples/clients/node-client].
 
 To start this client, run
 ----
@@ -32,6 +35,8 @@ $ npm install
 $ node client.js
 ----
 
+.Console
+----
 $ node client.js
 Host URL: http://localhost:8091/samples/greeter
 Choose user ...
@@ -40,7 +45,6 @@ Connecting using websocket ...
 elakito> Connected using websocket
 elakito> ping
 TRACE: sending  {"id":"0","method":"GET","path":"/v1/ping"}
-elakito> Connected using websocket
 elakito> TRACE: received {"code":200,"id":"0","type":"application/json"}{"pong":4}
 elakito> res0: {"code":200,"id":"0","type":"application/json"}{"pong":4}
 elakito> echo buenos dias
@@ -60,4 +64,4 @@ TRACE: sending  {"id":"4","method":"GET","path":"/v1/greet"}
 elakito> TRACE: received {"code":200,"id":"4","type":"application/json"}{"greeted":["petra","estrella"],"total":3}
 elakito> res4: {"code":200,"id":"4","type":"application/json"}{"greeted":["petra","estrella"],"total":3}
 elakito>
-
+----
