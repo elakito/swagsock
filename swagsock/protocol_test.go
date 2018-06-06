@@ -42,7 +42,7 @@ var (
 )
 
 func TestDefaultCodecEncode(t *testing.T) {
-	codec := newDefaultCodec()
+	codec := NewDefaultCodec()
 	for i, tmsgmap := range TEST_MSG_MAPS {
 		data, err := codec.EncodeSwaggerSocketMessage(tmsgmap, []byte(TEST_MSG_BODIES[i]))
 		if err != nil {
@@ -64,7 +64,7 @@ func TestDefaultCodecEncode(t *testing.T) {
 }
 
 func TestDefaultCodecDecode(t *testing.T) {
-	codec := newDefaultCodec()
+	codec := NewDefaultCodec()
 	for i, tmsgstr := range TEST_MSG_STRS {
 		headers, body, err := codec.DecodeSwaggerSocketMessage([]byte(tmsgstr))
 		if err != nil {

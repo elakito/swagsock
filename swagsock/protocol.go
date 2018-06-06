@@ -22,7 +22,7 @@ var websocketUpgrader = websocket.Upgrader{
 	},
 }
 
-func newDefaultCodec() Codec {
+func NewDefaultCodec() Codec {
 	return &defaultCodec{}
 }
 
@@ -68,7 +68,7 @@ func copyValue(src map[string]interface{}, target map[string]interface{}, key st
 // Create a new ProtocolHandler with the specified codec. If codec is nil, the defaultCodec is used
 func CreateProtocolHandler(codec Codec) ProtocolHandler {
 	if codec == nil {
-		codec = newDefaultCodec()
+		codec = NewDefaultCodec()
 	}
 	return &protocolHandler{codec: codec, connections: make(map[*websocket.Conn]struct{})}
 }
