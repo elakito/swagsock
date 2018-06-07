@@ -57,14 +57,12 @@ where
 
 .A POST request to path /foo with text content "Hello World!"
 ====
-{"id": "124", "method": "POST", "path": "/foo", "type": "text/plain"} +
-Hello World!
+{"id": "124", "method": "POST", "path": "/foo", "type": "text/plain"}Hello World!
 ====
 
 .A POST request to path /foo with text content "Buenos Dias!" and header "X-Language" set to "es"
 ====
-{"id": "125", "method": "POST", "path": "/foo", "type": "text/plain", "headers": {"X-Language": "es"}} +
-Buenos Dias
+{"id": "125", "method": "POST", "path": "/foo", "type": "text/plain", "headers": {"X-Language": "es"}}Buenos Dias
 ====
 
 .A response with content "Hello World!"
@@ -75,12 +73,10 @@ Hello World!
 
 .A response with large content "From a ...... to z" split in two responses
 ====
-{"id": "124", "code": 200, "continue": true} +
-From a ...
+{"id": "124", "code": 200, "continue": true}From a ...
 ====
 ====
-{"id": "124", "code": 200} +
-... to z
+{"id": "124", "code": 200}... to z
 ====
 
 ==== Integration

@@ -17,38 +17,38 @@ Make sure the greeter server is started (refer to https://github.com/elakito/swa
 
 To run the http client demo, run
 ----
-$ go run demo_client.go
+$ go run demo_client.go demo_common.go
 ----
 
 To run the websocket client demo, run
 ----
-$ go run demo_wsclient.go
+$ go run demo_wsclient.go demo_common.go
 ----
 
 .Console
 ----
-$ go run demo_client.go 
+$ go run demo_client.go demo_common.go
 demo_client invoking some operations at target_path http://localhost:8091/samples/greeter ...
 Ping-Response: {"pong":2}
 Echo-Response: {"echo":"hi"}
 Greet-Response: {"from":"foo","name":"bar","text":"hola"}
 GetGreetStatus-Response: {"count":2,"name":"bar"}
 GetGreetSummary-Response: {"greeted":["bar"],"total":2}
-$ go run demo_client.go 
+$ go run demo_client.go demo_common.go
 demo_client invoking some operations at target_path http://localhost:8091/samples/greeter ...
 Ping-Response: {"pong":3}
 Echo-Response: {"echo":"hi"}
 Greet-Response: {"from":"foo","name":"bar","text":"hola"}
 GetGreetStatus-Response: {"count":3,"name":"bar"}
 GetGreetSummary-Response: {"greeted":["bar"],"total":3}
-$ go run demo_wsclient.go 
+$ go run demo_wsclient.go demo_common.go
 demo_client invoking some operations at target_path ws://localhost:8091/samples/greeter ...
 Ping-Response: {"pong":4}
 Echo-Response: {"echo":"hi"}
 Greet-Response: {"from":"foo","name":"bar","text":"hola"}
 GetGreetStatus-Response: {"count":4,"name":"bar"}
 GetGreetSummary-Response: {"greeted":["bar"],"total":4}
-$ go run demo_wsclient.go 
+$ go run demo_wsclient.go demo_common.go
 demo_client invoking some operations at target_path ws://localhost:8091/samples/greeter ...
 Ping-Response: {"pong":5}
 Echo-Response: {"echo":"hi"}
