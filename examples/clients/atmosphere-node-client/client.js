@@ -4,43 +4,23 @@
  * An atmosphere node client program to interactively calls the greeter service
  * 
  * Usages: 
- * node client.js [options] [greeter-url]
- *
- * Options:
- *   -u    user
- *   -p    password
- *   -k    use insecure mode in TLS
+ * node client.js [greeter-url]
  *
  * Usage Samples:
- *  node client.js http://localhost:8091/samples/greeter
- *  node client.js -k -u 'guest' https://localhost:8495/samples/greeter
+ * node client.js http://localhost:8091/samples/greeter
  * 
  */
 
 "use strict";
 
 var HOST_URL = 'http://localhost:8091/samples/greeter';
-
 var TRACE = true;
 
 var hosturl = HOST_URL;
-var authuser
-var authpassword
-var insecure;
 
 var arg;
 for (var i = 2; i < process.argv.length; i++) {
     arg = process.argv[i];
-    if (arg === "-u") {
-        authuser = process.argv[++i];
-        arg = undefined;
-    } else if (arg === "-p") {
-        authpassword = process.argv[++i];
-        arg = undefined;
-    } else if (arg === "-k") {
-        insecure = true;
-        arg = undefined;
-    }
 }
 if (arg != undefined) {
     hosturl = arg;
@@ -49,38 +29,15 @@ if (arg != undefined) {
 console.log("Host URL: " + hosturl)
 
 var reader = require('readline');
-var writable = require('stream').Writable;
-var mutableStdout = new writable({
-    write: function(chunk, encoding, callback) {
-        if (!this.muted)
-            process.stdout.write(chunk, encoding);
-        callback();
-    }
-});
-var prompt = reader.createInterface({input: process.stdin, output: mutableStdout, terminal: true});
-mutableStdout.muted = false;
+var prompt = reader.createInterface(process.stdin, process.stdout);
 
-var headers = {'X-Requested-With': 'XMLHttpRequest'}
-if (authuser !== undefined) {
-    if (authpassword === undefined) {
-        prompt.question("Enter host password for user '" + authuser + "':", function(pw) {
-            authpassword = pw;
-            mutableStdout.muted = false;
-            console.log();
-            prompt.prompt();
-            headers["Authorization"] = "Basic " + Buffer.from(authuser+":"+authpassword).toString("base64")
-            queryUser();
-        });
-        mutableStdout.muted = true;
-    } else {
-        headers["Authorization"] = "Basic " + Buffer.from(authuser+":"+authpassword).toString("base64")
-        queryUser();
-    }
-} else {
-    queryUser();
-}
+var atmosphere = require('atmosphere.js');
 
-const WebSocket = require('ws')
+var request = { url: hosturl,
+                transport : 'websocket',
+                enableProtocol: false,
+                trackMessageLength: false,
+                reconnectInterval : 5000};
 var isopen = false;
 
 // request/respons index
@@ -93,11 +50,23 @@ const COMMAND_LIST =
      ["greet",    "Greet the person", "greet name text"],
      ["status",   "Display the greeting status", "status name"],
      ["summary",  "Display the greeting summary", "summary"],
-     ["help",     "Display this help message", "help"],
      ["quit",     "Quit the application", "quit"]];
 
 
 /////////////// utilities
+
+function getNextId() {
+    return (count++).toString();
+}
+
+function selectOption(c, opts) {
+    var i = c.length == 0 ? 0 : parseInt(c);
+    if (!(i >= 0 && i < opts.length)) {
+        console.log('Invalid selection: ' + c + '; Using ' + opts[0]);
+        i = 0;
+    }
+    return opts[i];
+}
 
 function splitMessage(msg) {
     var depth = 0;
@@ -117,19 +86,6 @@ function splitMessage(msg) {
         }
     }
     return [msg.substring(0, index), msg.substring(index)]
-}
-
-function getNextId() {
-    return (count++).toString();
-}
-
-function selectOption(c, opts) {
-    var i = c.length == 0 ? 0 : parseInt(c);
-    if (!(i >= 0 && i < opts.length)) {
-        console.log('Invalid selection: ' + c + '; Using ' + opts[0]);
-        i = 0;
-    }
-    return opts[i];
 }
 
 function getArgs(name, msg, num) {
@@ -218,12 +174,12 @@ function doGreet(v) {
         errorUsage("greet");
         return;
     }
-    var req = JSON.stringify({ "id": getNextId(), "method": "POST", "path": "/v1/greet/" + v[0], "type": "application/json"})+JSON.stringify({ "name": user, "text": v[1]});
+    var req = atmosphere.util.stringifyJSON({ "id": getNextId(), "method": "POST", "path": "/v1/greet/" + v[0], "type": "application/json"})+atmosphere.util.stringifyJSON({ "name": user, "text": v[1]});
 
     if (TRACE) {
         console.log("TRACE: sending ", req);
     }
-    subSocket.send(req);
+    subSocket.push(req);
 }
 
 function doStatus(v) {
@@ -231,30 +187,30 @@ function doStatus(v) {
         errorUsage("status");
         return;
     }
-    var req = JSON.stringify({ "id": getNextId(), "method": "GET", "path": "/v1/greet/" + v[0]});
+    var req = atmosphere.util.stringifyJSON({ "id": getNextId(), "method": "GET", "path": "/v1/greet/" + v[0]});
 
     if (TRACE) {
         console.log("TRACE: sending ", req);
     }
-    subSocket.send(req);
+    subSocket.push(req);
 }
 
 function doSummary(v) {
-    var req = JSON.stringify({ "id": getNextId(), "method": "GET", "path": "/v1/greet"});
+    var req = atmosphere.util.stringifyJSON({ "id": getNextId(), "method": "GET", "path": "/v1/greet"});
 
     if (TRACE) {
         console.log("TRACE: sending ", req);
     }
-    subSocket.send(req);
+    subSocket.push(req);
 }
 
 function doPing(v) {
-    var req = JSON.stringify({ "id": getNextId(), "method": "GET", "path": "/v1/ping"});
+    var req = atmosphere.util.stringifyJSON({ "id": getNextId(), "method": "GET", "path": "/v1/ping"});
 
     if (TRACE) {
         console.log("TRACE: sending ", req);
     }
-    subSocket.send(req);
+    subSocket.push(req);
 }
 
 function doEcho(v) {
@@ -262,12 +218,12 @@ function doEcho(v) {
         errorUsage("echo");
         return;
     }
-    var req = JSON.stringify({ "id": getNextId(), "method": "POST", "path": "/v1/echo", "type": "text/plain"})+v[0];
+    var req = atmosphere.util.stringifyJSON({ "id": getNextId(), "method": "POST", "path": "/v1/echo", "type": "text/plain"})+v[0];
 
     if (TRACE) {
         console.log("TRACE: sending ", req);
     }
-    subSocket.send(req);
+    subSocket.push(req);
 }
 
 
@@ -276,79 +232,78 @@ function doQuit() {
     process.exit(0);
 }
 
-////////////////////
+
+request.onOpen = function(response) {
+    isopen = true;
+    console.log('Connected using ' + response.transport);
+    prompt.setPrompt(userprompt, 2);
+    prompt.prompt();
+};
+
+request.onReopen = function(response) {
+    isopen = true;
+    console.log('Reopened using ' + response.transport);
+    prompt.setPrompt(userprompt, 2);
+    prompt.prompt();
+}
+
+request.onReconnect = function(response) {
+    console.log("Reconnecting ...");
+}
+
+request.onMessage = function (response) {
+    var message = response.responseBody;
+    var jpart;
+    var data;
+    var json;
+    //FIXME use a better logic to determine the mode
+    var messageparts = splitMessage(message);
+    jpart = messageparts[0];
+    data = messageparts[1];
+    try {
+        json = JSON.parse(jpart);
+    } catch (e) {
+        console.log('Invalid response: ', message);
+        return;
+    }
+    if (json.heartbeat) {
+        // ignore
+    } else {
+        if (TRACE) {
+            console.log("TRACE: received " + message);
+            prompt.setPrompt(userprompt, 2);
+            prompt.prompt();
+        }
+
+        if (json.error_code) {
+            console.log(jpart);
+        } else if (json.id) {
+            console.log("res" + json.id + ":", message);
+        } else {
+            // no id supplied in the response, so just write the plain result
+            console.log("res*" + ":", message)
+        }
+    }
+    prompt.setPrompt(userprompt, 2);
+    prompt.prompt();
+};
+
+request.onClose = function(response) {
+    console.log("Closed");
+    isopen = false;
+}
+
+request.onError = function(response) {
+    console.log("Sorry, something went wrong: " + response.responseBody);
+};
 
 var transport = null;
 var subSocket = null;
-
-function connect() {
-    subSocket = new WebSocket(hosturl, {
-        perMessageDeflate: false,
-        rejectUnauthorized: !insecure,
-        headers: headers,
-    });
-    subSocket.on('open', function open() {
-        isopen = true;
-        console.log('Connected using websocket');
-        prompt.setPrompt(userprompt, 2);
-        prompt.prompt();
-    });
-
-    subSocket.on('message', function incoming(message) {
-        var jpart;
-        var data;
-        var json;
-        //FIXME use a better logic to determine the mode
-        var messageparts = splitMessage(message);
-        jpart = messageparts[0];
-        data = messageparts[1];
-        try {
-            json = JSON.parse(jpart);
-        } catch (e) {
-            console.log('Invalid response: ', message);
-            return;
-        }
-        if (json.heartbeat) {
-            // ignore
-        } else {
-            if (TRACE) {
-                console.log("TRACE: received " + message);
-                        prompt.setPrompt(userprompt, 2);
-                        prompt.prompt();
-                    }
-
-            if (json.error_code) {
-                console.log(jpart);
-            } else if (json.id) {
-                console.log("res" + json.id + ":", message);
-            } else {
-                // no id supplied in the response, so just write the plain result
-                console.log("res*" + ":", message)
-            }
-                }
-        prompt.setPrompt(userprompt, 2);
-        prompt.prompt();
-    });
-
-    subSocket.on('close', function close() {
-        console.log("Closed");
-        isopen = false;
-        console.log("Reconnecting ...");
-    });
-
-    subSocket.on('error', function error(message) {
-        console.log("Error: " + message);
-        prompt.setPrompt(userprompt, 2);
-        prompt.prompt();
-    });
-}
-
-function keepConnection() {
-    if (!subSocket || subSocket.readyState == 3) connect();
-}
-
 var user = null;
 var userprompt = "> ";
+
+queryUser();
+
 prompt.
 on('line', function(line) {
     try {
@@ -356,9 +311,14 @@ on('line', function(line) {
         if (user == null) {
             user = msg
             userprompt = user + userprompt;
-            connect();
-            setInterval(keepConnection, 5000);
-            console.log("Connecting using websocket ...");
+            subSocket = atmosphere.subscribe(request);
+            console.log("Connecting using " + request.transport + " ...");
+            setTimeout(function() {
+                if (!isopen) {
+                    console.log("Unable to open a connection. Terminated.");
+                    process.exit(0);
+                }
+            }, 3000);
         } else if (msg.length == 0) {
             doHelp();
         } else if (msg.indexOf("ping") == 0) {
