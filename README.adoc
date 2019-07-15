@@ -120,7 +120,7 @@ A sampel server side code is located at https://github.com/elakito/swagsock/tree
 
 ===== Client-Side
 
-The code to enable the client side processing is available, however, this is still in work in progress.
+The code to enable the client side processing in the generated client code is available, however, this is still in work in progress.
 
 - Integration to the client code requires some changes to go-openapi/runtime. Therefore, currently the demo client includes some locally copied and modified code.
 - Currently, the operations are invoked in the same way using runtime.Submit which synchronously waits for the response. To utilize the websocket's asynchronous behavior, it will be more suitable to have the asynchronous version of runtime.Submit. (e.g., adding runtime.SubmitAsync to return the result asynchronously)
@@ -132,6 +132,9 @@ A sampel client side code is located at https://github.com/elakito/swagsock/tree
   - This server is generated from examples/greeter/swagger.yaml using go-swagger and it is enabled for websocket
 
  * https://github.com/elakito/swagsock/tree/master/examples/clients/node-client[examples/clients/node-client]
+  - A node.js client to call the greeter service.
+
+* https://github.com/elakito/swagsock/tree/master/examples/clients/atmosphere-node-client[examples/clients/atmosphere-node-client]
   - A node.js client based on atmosphere.js to call the greeter service.
 
 
