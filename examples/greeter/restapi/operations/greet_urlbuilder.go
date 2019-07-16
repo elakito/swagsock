@@ -38,7 +38,7 @@ func (o *GreetURL) SetBasePath(bp string) {
 
 // Build a url path and query string
 func (o *GreetURL) Build() (*url.URL, error) {
-	var result url.URL
+	var _result url.URL
 
 	var _path = "/v1/greet/{name}"
 
@@ -46,16 +46,16 @@ func (o *GreetURL) Build() (*url.URL, error) {
 	if name != "" {
 		_path = strings.Replace(_path, "{name}", name, -1)
 	} else {
-		return nil, errors.New("Name is required on GreetURL")
+		return nil, errors.New("name is required on GreetURL")
 	}
 
 	_basePath := o._basePath
 	if _basePath == "" {
 		_basePath = "/samples/greeter"
 	}
-	result.Path = golangswaggerpaths.Join(_basePath, _path)
+	_result.Path = golangswaggerpaths.Join(_basePath, _path)
 
-	return &result, nil
+	return &_result, nil
 }
 
 // Must is a helper function to panic when the url builder returns an error
