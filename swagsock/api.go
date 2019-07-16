@@ -19,4 +19,3 @@ type ProtocolHandler interface {
 	// Destroy the handler
 	Destroy()
 }
-

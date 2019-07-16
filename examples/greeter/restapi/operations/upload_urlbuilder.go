@@ -48,6 +48,7 @@ func (o *UploadURL) Build() (*url.URL, error) {
 	} else {
 		return nil, errors.New("Name is required on UploadURL")
 	}
+
 	_basePath := o._basePath
 	if _basePath == "" {
 		_basePath = "/samples/greeter"

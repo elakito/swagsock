@@ -38,9 +38,6 @@ func NewHTTPClient(formats strfmt.Registry) *GreeterDemo {
 // using a customizable transport config.
 func NewHTTPClientWithConfig(formats strfmt.Registry, cfg *TransportConfig) *GreeterDemo {
 	// ensure nullable parameters have default
-	if formats == nil {
-		formats = strfmt.Default
-	}
 	if cfg == nil {
 		cfg = DefaultTransportConfig()
 	}
@@ -52,6 +49,11 @@ func NewHTTPClientWithConfig(formats strfmt.Registry, cfg *TransportConfig) *Gre
 
 // New creates a new greeter demo client
 func New(transport runtime.ClientTransport, formats strfmt.Registry) *GreeterDemo {
+	// ensure nullable parameters have default
+	if formats == nil {
+		formats = strfmt.Default
+	}
+
 	cli := new(GreeterDemo)
 	cli.Transport = transport
 

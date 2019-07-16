@@ -7,7 +7,6 @@ package operations
 
 import (
 	"net/http"
-	"os"
 	"time"
 
 	"golang.org/x/net/context"
@@ -67,7 +66,7 @@ type UploadParams struct {
 	  greeting card file to upload
 
 	*/
-	File *os.File
+	File runtime.NamedReadCloser
 	/*Name
 	  greeting name
 
@@ -113,13 +112,13 @@ func (o *UploadParams) SetHTTPClient(client *http.Client) {
 }
 
 // WithFile adds the file to the upload params
-func (o *UploadParams) WithFile(file *os.File) *UploadParams {
+func (o *UploadParams) WithFile(file runtime.NamedReadCloser) *UploadParams {
 	o.SetFile(file)
 	return o
 }
 
 // SetFile adds the file to the upload params
-func (o *UploadParams) SetFile(file *os.File) {
+func (o *UploadParams) SetFile(file runtime.NamedReadCloser) {
 	o.File = file
 }
 

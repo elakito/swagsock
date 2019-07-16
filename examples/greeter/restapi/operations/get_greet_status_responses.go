@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 
-	"github.com/elakito/swagsock/examples/greeter/models"
+	models "github.com/elakito/swagsock/examples/greeter/models"
 )
 
 // GetGreetStatusOKCode is the HTTP code returned for type GetGreetStatusOK
@@ -30,6 +30,7 @@ type GetGreetStatusOK struct {
 
 // NewGetGreetStatusOK creates GetGreetStatusOK with default headers values
 func NewGetGreetStatusOK() *GetGreetStatusOK {
+
 	return &GetGreetStatusOK{}
 }
 

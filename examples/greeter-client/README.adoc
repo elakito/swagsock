@@ -5,7 +5,7 @@ Currently, there are two separate clients: demo_client.go which uses http and de
 The goal is to have a single REST client that transparently supports the Websocket
 protocol in addtion to http to interact with the greeter server.
 
-The client side code has been generated from the included https://raw.githubusercontent.com/elakito/swagsock/master/examples/greeter/swagger.yaml[swagger.yaml] using go swagger (version 0.13.0) by
+The client side code has been generated from the included https://raw.githubusercontent.com/elakito/swagsock/master/examples/greeter/swagger.yaml[swagger.yaml] using go swagger (version 0.17.2) by
 ----
 $ swagger generate client -f swagger.yaml -A greeter-demo
 ----

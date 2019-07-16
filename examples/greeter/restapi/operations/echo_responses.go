@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 
-	"github.com/elakito/swagsock/examples/greeter/models"
+	models "github.com/elakito/swagsock/examples/greeter/models"
 )
 
 // EchoOKCode is the HTTP code returned for type EchoOK
@@ -30,6 +30,7 @@ type EchoOK struct {
 
 // NewEchoOK creates EchoOK with default headers values
 func NewEchoOK() *EchoOK {
+
 	return &EchoOK{}
 }
 

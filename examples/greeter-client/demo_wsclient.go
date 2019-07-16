@@ -16,9 +16,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/go-openapi/runtime"
 	runtimeclient "github.com/go-openapi/runtime/client"
+	"github.com/gorilla/websocket"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/satori/go.uuid"
@@ -50,7 +50,6 @@ func main() {
 
 	perform(client)
 }
-
 
 /////////
 // currently, this demo client works with the unmodified go-openapi/runtime et al.
@@ -162,8 +161,8 @@ func (t *wstransport) Submit(operation *runtime.ClientOperation) (interface{}, e
 	var body string
 	if req.payload != nil {
 		switch req.payload.(type) {
-		case *string:
-			body = *(req.payload.(*string))
+		case string:
+			body = req.payload.(string)
 		case encoding.BinaryMarshaler:
 			binbody, _ := req.payload.(encoding.BinaryMarshaler).MarshalBinary()
 			body = string(binbody)
@@ -315,6 +314,14 @@ func (r *request) GetBody() []byte {
 	return r.buf.Bytes()
 }
 
+func (r *request) GetBodyParam() interface{} {
+	return r.GetBody()
+}
+
+func (r *request) GetHeaderParams() http.Header {
+	return r.header
+}
+
 // SetHeaderParam adds a header param to the request
 // when there is only 1 value provided for the varargs, it will set it.
 // when there are several values provided for the varargs it will add it (no overriding)
@@ -365,6 +372,10 @@ func (r *request) SetPathParam(name string, value string) error {
 
 	r.pathParams[name] = value
 	return nil
+}
+
+func (r *request) GetFileParam() map[string][]runtime.NamedReadCloser {
+	return r.fileFields
 }
 
 // SetFileParam adds a file param to the request

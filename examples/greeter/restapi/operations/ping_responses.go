@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 
-	"github.com/elakito/swagsock/examples/greeter/models"
+	models "github.com/elakito/swagsock/examples/greeter/models"
 )
 
 // PingOKCode is the HTTP code returned for type PingOK
@@ -30,6 +30,7 @@ type PingOK struct {
 
 // NewPingOK creates PingOK with default headers values
 func NewPingOK() *PingOK {
+
 	return &PingOK{}
 }
 

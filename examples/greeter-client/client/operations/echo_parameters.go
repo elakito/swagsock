@@ -66,7 +66,7 @@ type EchoParams struct {
 	  A message
 
 	*/
-	Body *string
+	Body string
 
 	timeout    time.Duration
 	Context    context.Context
@@ -107,13 +107,13 @@ func (o *EchoParams) SetHTTPClient(client *http.Client) {
 }
 
 // WithBody adds the body to the echo params
-func (o *EchoParams) WithBody(body *string) *EchoParams {
+func (o *EchoParams) WithBody(body string) *EchoParams {
 	o.SetBody(body)
 	return o
 }
 
 // SetBody adds the body to the echo params
-func (o *EchoParams) SetBody(body *string) {
+func (o *EchoParams) SetBody(body string) {
 	o.Body = body
 }
 
@@ -125,10 +125,8 @@ func (o *EchoParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry
 	}
 	var res []error
 
-	if o.Body != nil {
-		if err := r.SetBodyParam(o.Body); err != nil {
-			return err
-		}
+	if err := r.SetBodyParam(o.Body); err != nil {
+		return err
 	}
 
 	if len(res) > 0 {

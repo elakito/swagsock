@@ -48,6 +48,7 @@ func (o *GreetURL) Build() (*url.URL, error) {
 	} else {
 		return nil, errors.New("Name is required on GreetURL")
 	}
+
 	_basePath := o._basePath
 	if _basePath == "" {
 		_basePath = "/samples/greeter"

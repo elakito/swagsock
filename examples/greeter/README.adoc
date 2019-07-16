@@ -6,7 +6,7 @@ which in turn is originated from SwaggerSocket[2].
 
 This binding can be considered as a simplified yet more efficient and flexible version of its predecessor.
 
-The server side code has been generated from the included https://raw.githubusercontent.com/elakito/swagsock/master/examples/greeter/swagger.yaml[swagger.yaml] using go swagger (version 0.13.0) by
+The server side code has been generated from the included https://raw.githubusercontent.com/elakito/swagsock/master/examples/greeter/swagger.yaml[swagger.yaml] using go swagger (version 0.17.2) by
 ----
 $ swagger generate server -f swagger.yaml -A greeter-demo
 ----

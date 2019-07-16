@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 
-	"github.com/elakito/swagsock/examples/greeter/models"
+	models "github.com/elakito/swagsock/examples/greeter/models"
 )
 
 // UploadOKCode is the HTTP code returned for type UploadOK
@@ -30,6 +30,7 @@ type UploadOK struct {
 
 // NewUploadOK creates UploadOK with default headers values
 func NewUploadOK() *UploadOK {
+
 	return &UploadOK{}
 }
 
@@ -73,6 +74,7 @@ type UploadInternalServerError struct {
 
 // NewUploadInternalServerError creates UploadInternalServerError with default headers values
 func NewUploadInternalServerError() *UploadInternalServerError {
+
 	return &UploadInternalServerError{}
 }
 

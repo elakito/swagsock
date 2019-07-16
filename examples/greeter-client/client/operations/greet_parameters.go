@@ -17,7 +17,7 @@ import (
 
 	strfmt "github.com/go-openapi/strfmt"
 
-	"github.com/elakito/swagsock/examples/greeter-client/models"
+	models "github.com/elakito/swagsock/examples/greeter-client/models"
 )
 
 // NewGreetParams creates a new GreetParams object

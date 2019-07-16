@@ -6,8 +6,8 @@ import (
 	"log"
 
 	apiclient "github.com/elakito/swagsock/examples/greeter-client/client"
-	apimodels "github.com/elakito/swagsock/examples/greeter-client/models"
 	apioperations "github.com/elakito/swagsock/examples/greeter-client/client/operations"
+	apimodels "github.com/elakito/swagsock/examples/greeter-client/models"
 )
 
 // the common code to run after the client is setup
@@ -24,7 +24,7 @@ func perform(client *apiclient.GreeterDemo) {
 
 	// echo
 	echoBody := "hi"
-	echoParams := apioperations.NewEchoParams().WithBody(&echoBody)
+	echoParams := apioperations.NewEchoParams().WithBody(echoBody)
 	echoOK, err := client.Operations.Echo(echoParams)
 	if err != nil {
 		log.Fatalf("failed to invoke: %v", err)

@@ -4,17 +4,16 @@ package restapi
 
 import (
 	"crypto/tls"
+	"io/ioutil"
 	"net/http"
 	"sync"
 	"sync/atomic"
 
-	errors "github.com/go-openapi/errors"
-	runtime "github.com/go-openapi/runtime"
-	middleware "github.com/go-openapi/runtime/middleware"
-	graceful "github.com/tylerb/graceful"
-
 	"github.com/elakito/swagsock/examples/greeter/models"
 	"github.com/elakito/swagsock/examples/greeter/restapi/operations"
+	"github.com/go-openapi/errors"
+	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/runtime/middleware"
 
 	"github.com/elakito/swagsock/swagsock"
 )
@@ -53,7 +52,7 @@ func configureAPI(api *operations.GreeterDemoAPI) http.Handler {
 	api.JSONProducer = runtime.JSONProducer()
 
 	api.EchoHandler = operations.EchoHandlerFunc(func(params operations.EchoParams) middleware.Responder {
-		return operations.NewEchoOK().WithPayload(&models.EchoReply{Echo: *params.Body})
+		return operations.NewEchoOK().WithPayload(&models.EchoReply{Echo: params.Body})
 	})
 	api.GetGreetStatusHandler = operations.GetGreetStatusHandlerFunc(func(params operations.GetGreetStatusParams) middleware.Responder {
 		return operations.NewGetGreetStatusOK().WithPayload(&models.GreetingStatus{Name: params.Name, Count: greeted[params.Name]})
@@ -84,7 +83,12 @@ func configureAPI(api *operations.GreeterDemoAPI) http.Handler {
 		return operations.NewPingOK().WithPayload(&models.Pong{Pong: atomic.AddInt32(&counter, 1)})
 	})
 	api.UploadHandler = operations.UploadHandlerFunc(func(params operations.UploadParams) middleware.Responder {
-		return operations.NewUploadOK().WithPayload(&models.UploadStatus{Name: params.Name, Size: int32(params.File.Header.Size)})
+		var size int
+		if data, err := ioutil.ReadAll(params.File); err == nil {
+			size = len(data)
+			params.File.Close()
+		}
+		return operations.NewUploadOK().WithPayload(&models.UploadStatus{Name: params.Name, Size: int32(size)})
 	})
 
 	api.ServerShutdown = func() {}
@@ -101,7 +105,7 @@ func configureTLS(tlsConfig *tls.Config) {
 // If you need to modify a config, store server instance to stop it individually later, this is the place.
 // This function can be called multiple times, depending on the number of serving schemes.
 // scheme value will be set accordingly: "http", "https" or "unix"
-func configureServer(s *graceful.Server, scheme, addr string) {
+func configureServer(s *http.Server, scheme, addr string) {
 }
 
 // The middleware configuration is for the handler executors. These do not apply to the swagger.json document.
@@ -133,7 +137,6 @@ func globalMiddleware(handler http.Handler) http.Handler {
 		handler.ServeHTTP(w, r)
 	})
 }
-
 
 // copied from middleware/not_implemented.go
 type errorResp struct {

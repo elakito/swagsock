@@ -48,6 +48,7 @@ func (o *GetGreetStatusURL) Build() (*url.URL, error) {
 	} else {
 		return nil, errors.New("Name is required on GetGreetStatusURL")
 	}
+
 	_basePath := o._basePath
 	if _basePath == "" {
 		_basePath = "/samples/greeter"

@@ -15,13 +15,13 @@ import (
 
 	strfmt "github.com/go-openapi/strfmt"
 
-	"github.com/elakito/swagsock/examples/greeter/models"
+	models "github.com/elakito/swagsock/examples/greeter/models"
 )
 
 // NewGreetParams creates a new GreetParams object
-// with the default values initialized.
+// no default values defined in spec.
 func NewGreetParams() GreetParams {
-	var ()
+
 	return GreetParams{}
 }
 
@@ -47,9 +47,12 @@ type GreetParams struct {
 }
 
 // BindRequest both binds and validates a request, it assumes that complex things implement a Validatable(strfmt.Registry) error interface
-// for simple values it will use straight method calls
+// for simple values it will use straight method calls.
+//
+// To ensure default values, the struct must have been initialized with NewGreetParams() beforehand.
 func (o *GreetParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
 	var res []error
+
 	o.HTTPRequest = r
 
 	if runtime.HasBody(r) {
@@ -61,8 +64,8 @@ func (o *GreetParams) BindRequest(r *http.Request, route *middleware.MatchedRout
 			} else {
 				res = append(res, errors.NewParseError("body", "body", "", err))
 			}
-
 		} else {
+			// validate body object
 			if err := body.Validate(route.Formats); err != nil {
 				res = append(res, err)
 			}
@@ -71,11 +74,9 @@ func (o *GreetParams) BindRequest(r *http.Request, route *middleware.MatchedRout
 				o.Body = &body
 			}
 		}
-
 	} else {
 		res = append(res, errors.Required("body", "body"))
 	}
-
 	rName, rhkName, _ := route.Params.GetOK("name")
 	if err := o.bindName(rName, rhkName, route.Formats); err != nil {
 		res = append(res, err)
@@ -87,11 +88,15 @@ func (o *GreetParams) BindRequest(r *http.Request, route *middleware.MatchedRout
 	return nil
 }
 
+// bindName binds and validates parameter Name from path.
 func (o *GreetParams) bindName(rawData []string, hasKey bool, formats strfmt.Registry) error {
 	var raw string
 	if len(rawData) > 0 {
 		raw = rawData[len(rawData)-1]
 	}
+
+	// Required: true
+	// Parameter is provided by construction from the route
 
 	o.Name = raw
 

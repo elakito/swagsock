@@ -15,9 +15,9 @@ import (
 )
 
 // NewEchoParams creates a new EchoParams object
-// with the default values initialized.
+// no default values defined in spec.
 func NewEchoParams() EchoParams {
-	var ()
+
 	return EchoParams{}
 }
 
@@ -34,13 +34,16 @@ type EchoParams struct {
 	  Required: true
 	  In: body
 	*/
-	Body *string
+	Body string
 }
 
 // BindRequest both binds and validates a request, it assumes that complex things implement a Validatable(strfmt.Registry) error interface
-// for simple values it will use straight method calls
+// for simple values it will use straight method calls.
+//
+// To ensure default values, the struct must have been initialized with NewEchoParams() beforehand.
 func (o *EchoParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
 	var res []error
+
 	o.HTTPRequest = r
 
 	if runtime.HasBody(r) {
@@ -52,18 +55,13 @@ func (o *EchoParams) BindRequest(r *http.Request, route *middleware.MatchedRoute
 			} else {
 				res = append(res, errors.NewParseError("body", "body", "", err))
 			}
-
 		} else {
-
-			if len(res) == 0 {
-				o.Body = &body
-			}
+			// no validation required on inline body
+			o.Body = body
 		}
-
 	} else {
 		res = append(res, errors.Required("body", "body"))
 	}
-
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}

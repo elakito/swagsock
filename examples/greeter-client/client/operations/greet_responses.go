@@ -13,7 +13,7 @@ import (
 
 	strfmt "github.com/go-openapi/strfmt"
 
-	"github.com/elakito/swagsock/examples/greeter-client/models"
+	models "github.com/elakito/swagsock/examples/greeter-client/models"
 )
 
 // GreetReader is a Reader for the Greet structure.
