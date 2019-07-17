@@ -67,7 +67,7 @@ type UploadParams struct {
 	*/
 	File runtime.NamedReadCloser
 	/*Name
-	  greeting name
+	  greeter's name
 
 	*/
 	Name string

@@ -62,7 +62,7 @@ for the get greet status operation typically these are written to a http.Request
 type GetGreetStatusParams struct {
 
 	/*Name
-	  greeting name
+	  greeter's name
 
 	*/
 	Name string

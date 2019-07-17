@@ -10,6 +10,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/runtime/middleware"
+
 	"github.com/gorilla/websocket"
 )
 
@@ -46,7 +49,7 @@ func (c *defaultCodec) DecodeSwaggerSocketMessage(data []byte) (map[string]inter
 	return headers, body, nil
 }
 
-func (c *defaultCodec) EncodeSwaggerSocketMessage(headers map[string]interface{}, body []byte) ([]byte, error){
+func (c *defaultCodec) EncodeSwaggerSocketMessage(headers map[string]interface{}, body []byte) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	hb, err := json.Marshal(headers)
 	if err != nil {
@@ -135,8 +138,16 @@ func newHttpRequest(baseURI string, data []byte, codec Codec) (string, *http.Req
 	uri := fmt.Sprintf("%s%s", baseURI, getHeader(headers, "path"))
 	req, _ := http.NewRequest(getHeader(headers, "method"), uri, bytes.NewReader(body))
 	req.RequestURI = uri
+	//TODO for the id, we should transfer both the client specific id and the client identifier so that
+	// a multi-response sequence can survive reconnection and that multiple clients don't interfer each other.
+	copyHeaderToHttpHeaders(headers, "id", req.Header, "X-Request-Id")
 	copyHeaderToHttpHeaders(headers, "type", req.Header, "Content-Type")
 	copyHeaderToHttpHeaders(headers, "accept", req.Header, "Accept")
+	if aheaders, ok := headers["headers"].(map[string]interface{}); ok {
+		for aheader, avalue := range aheaders {
+			req.Header.Add(aheader, avalue.(string))
+		}
+	}
 	return getHeader(headers, "id"), req
 }
 
@@ -235,4 +246,30 @@ func IsWebsocketUpgradeRequested(r *http.Request) bool {
 		return false
 	}
 	return true
+}
+
+// utilities
+func GetRequestID(req *http.Request) string {
+	return req.Header.Get("X-Request-Id")
+}
+
+func NewReusableResponder(r middleware.Responder) *ReusableResponder {
+	return &ReusableResponder{responder: r}
+}
+
+// ReusableResponder is a middleware.Responder which grab the http.ResponseWriter for later reuse.
+type ReusableResponder struct {
+	responder middleware.Responder
+	writer    http.ResponseWriter
+}
+
+func (r *ReusableResponder) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
+	if r.writer == nil {
+		r.writer = rw
+	}
+	r.responder.WriteResponse(rw, producer)
+}
+
+func (r *ReusableResponder) Write(b []byte) (int, error) {
+	return r.writer.Write(b)
 }

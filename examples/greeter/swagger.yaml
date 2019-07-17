@@ -57,7 +57,7 @@ paths:
       parameters:
       - name: "name"
         in: "path"
-        description: "greeting name"
+        description: "greeter's name"
         required: true
         type: "string"
       responses:
@@ -76,7 +76,7 @@ paths:
       parameters:
       - name: "name"
         in: "path"
-        description: "greeting name"
+        description: "greeter's name"
         required: true
         type: "string"
       - in: "body"
@@ -102,7 +102,7 @@ paths:
       parameters:
       - name: "name"
         in: "path"
-        description: "greeting name"
+        description: "greeter's name"
         required: true
         type: "string"
       - name: "file"
@@ -132,6 +132,44 @@ paths:
           description: "Returns a pong"
           schema:
             $ref: "#/definitions/pong"
+  /v1/subscribe/{name}:
+    get:
+      summary: "Subscriber to the greeting events"
+      description: "Subscribe to the greeteing events"
+      operationId: "subscribe"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "name"
+          in: "path"
+          description: "greeted name"
+          required: true
+          type: "string"
+      responses:
+        200:
+          description: "Returns a subscription information"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/greetingReply"
+  /v1/unsubscribe/{sid}:
+    delete:
+      summary: "Unsubscriber from the greeting events"
+      description: "Unsubscribe from the greeting events"
+      operationId: "unsubscribe"
+      produces:
+        - "application/json"
+      parameters:
+      - name: "sid"
+        in: "path"
+        description: "subscription id"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "Returns the subscription summary"
+          schema:
+            $ref: "#/definitions/greetingSummary"
 securityDefinitions:
   UserSecurity:
     type: "basic"

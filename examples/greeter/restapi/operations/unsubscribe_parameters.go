@@ -14,40 +14,40 @@ import (
 	strfmt "github.com/go-openapi/strfmt"
 )
 
-// NewGetGreetStatusParams creates a new GetGreetStatusParams object
+// NewUnsubscribeParams creates a new UnsubscribeParams object
 // no default values defined in spec.
-func NewGetGreetStatusParams() GetGreetStatusParams {
+func NewUnsubscribeParams() UnsubscribeParams {
 
-	return GetGreetStatusParams{}
+	return UnsubscribeParams{}
 }
 
-// GetGreetStatusParams contains all the bound params for the get greet status operation
+// UnsubscribeParams contains all the bound params for the unsubscribe operation
 // typically these are obtained from a http.Request
 //
-// swagger:parameters getGreetStatus
-type GetGreetStatusParams struct {
+// swagger:parameters unsubscribe
+type UnsubscribeParams struct {
 
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 
-	/*greeter's name
+	/*subscription id
 	  Required: true
 	  In: path
 	*/
-	Name string
+	Sid string
 }
 
 // BindRequest both binds and validates a request, it assumes that complex things implement a Validatable(strfmt.Registry) error interface
 // for simple values it will use straight method calls.
 //
-// To ensure default values, the struct must have been initialized with NewGetGreetStatusParams() beforehand.
-func (o *GetGreetStatusParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
+// To ensure default values, the struct must have been initialized with NewUnsubscribeParams() beforehand.
+func (o *UnsubscribeParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
 	var res []error
 
 	o.HTTPRequest = r
 
-	rName, rhkName, _ := route.Params.GetOK("name")
-	if err := o.bindName(rName, rhkName, route.Formats); err != nil {
+	rSid, rhkSid, _ := route.Params.GetOK("sid")
+	if err := o.bindSid(rSid, rhkSid, route.Formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -57,8 +57,8 @@ func (o *GetGreetStatusParams) BindRequest(r *http.Request, route *middleware.Ma
 	return nil
 }
 
-// bindName binds and validates parameter Name from path.
-func (o *GetGreetStatusParams) bindName(rawData []string, hasKey bool, formats strfmt.Registry) error {
+// bindSid binds and validates parameter Sid from path.
+func (o *UnsubscribeParams) bindSid(rawData []string, hasKey bool, formats strfmt.Registry) error {
 	var raw string
 	if len(rawData) > 0 {
 		raw = rawData[len(rawData)-1]
@@ -67,7 +67,7 @@ func (o *GetGreetStatusParams) bindName(rawData []string, hasKey bool, formats s
 	// Required: true
 	// Parameter is provided by construction from the route
 
-	o.Name = raw
+	o.Sid = raw
 
 	return nil
 }

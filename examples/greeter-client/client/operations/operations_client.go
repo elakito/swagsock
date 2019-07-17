@@ -175,6 +175,66 @@ func (a *Client) Ping(params *PingParams) (*PingOK, error) {
 }
 
 /*
+Subscribe subscribers to the greeting events
+
+Subscribe to the greeteing events
+*/
+func (a *Client) Subscribe(params *SubscribeParams) (*SubscribeOK, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewSubscribeParams()
+	}
+
+	result, err := a.transport.Submit(&runtime.ClientOperation{
+		ID:                 "subscribe",
+		Method:             "GET",
+		PathPattern:        "/v1/subscribe/{name}",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{""},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &SubscribeReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*SubscribeOK), nil
+
+}
+
+/*
+Unsubscribe unsubscribers from the greeting events
+
+Unsubscribe from the greeting events
+*/
+func (a *Client) Unsubscribe(params *UnsubscribeParams) (*UnsubscribeOK, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewUnsubscribeParams()
+	}
+
+	result, err := a.transport.Submit(&runtime.ClientOperation{
+		ID:                 "unsubscribe",
+		Method:             "DELETE",
+		PathPattern:        "/v1/unsubscribe/{sid}",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{""},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &UnsubscribeReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result.(*UnsubscribeOK), nil
+
+}
+
+/*
 Upload uploads a greeting card
 
 Upload a greeting card

@@ -37,7 +37,7 @@ type UploadParams struct {
 	  In: formData
 	*/
 	File io.ReadCloser
-	/*greeting name
+	/*greeter's name
 	  Required: true
 	  In: path
 	*/

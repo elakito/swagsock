@@ -96,7 +96,7 @@ func init() {
         "parameters": [
           {
             "type": "string",
-            "description": "greeting name",
+            "description": "greeter's name",
             "name": "name",
             "in": "path",
             "required": true
@@ -124,7 +124,7 @@ func init() {
         "parameters": [
           {
             "type": "string",
-            "description": "greeting name",
+            "description": "greeter's name",
             "name": "name",
             "in": "path",
             "required": true
@@ -163,7 +163,7 @@ func init() {
         "parameters": [
           {
             "type": "string",
-            "description": "greeting name",
+            "description": "greeter's name",
             "name": "name",
             "in": "path",
             "required": true
@@ -204,6 +204,63 @@ func init() {
             "description": "Returns a pong",
             "schema": {
               "$ref": "#/definitions/pong"
+            }
+          }
+        }
+      }
+    },
+    "/v1/subscribe/{name}": {
+      "get": {
+        "description": "Subscribe to the greeteing events",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Subscriber to the greeting events",
+        "operationId": "subscribe",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "greeted name",
+            "name": "name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns a subscription information",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/greetingReply"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/unsubscribe/{sid}": {
+      "delete": {
+        "description": "Unsubscribe from the greeting events",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Unsubscriber from the greeting events",
+        "operationId": "unsubscribe",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "subscription id",
+            "name": "sid",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns the subscription summary",
+            "schema": {
+              "$ref": "#/definitions/greetingSummary"
             }
           }
         }
@@ -404,7 +461,7 @@ func init() {
         "parameters": [
           {
             "type": "string",
-            "description": "greeting name",
+            "description": "greeter's name",
             "name": "name",
             "in": "path",
             "required": true
@@ -432,7 +489,7 @@ func init() {
         "parameters": [
           {
             "type": "string",
-            "description": "greeting name",
+            "description": "greeter's name",
             "name": "name",
             "in": "path",
             "required": true
@@ -471,7 +528,7 @@ func init() {
         "parameters": [
           {
             "type": "string",
-            "description": "greeting name",
+            "description": "greeter's name",
             "name": "name",
             "in": "path",
             "required": true
@@ -512,6 +569,63 @@ func init() {
             "description": "Returns a pong",
             "schema": {
               "$ref": "#/definitions/pong"
+            }
+          }
+        }
+      }
+    },
+    "/v1/subscribe/{name}": {
+      "get": {
+        "description": "Subscribe to the greeteing events",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Subscriber to the greeting events",
+        "operationId": "subscribe",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "greeted name",
+            "name": "name",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns a subscription information",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/greetingReply"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/unsubscribe/{sid}": {
+      "delete": {
+        "description": "Unsubscribe from the greeting events",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Unsubscriber from the greeting events",
+        "operationId": "unsubscribe",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "subscription id",
+            "name": "sid",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns the subscription summary",
+            "schema": {
+              "$ref": "#/definitions/greetingSummary"
             }
           }
         }

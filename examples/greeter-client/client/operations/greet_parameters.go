@@ -69,7 +69,7 @@ type GreetParams struct {
 	*/
 	Body *models.Body
 	/*Name
-	  greeting name
+	  greeter's name
 
 	*/
 	Name string

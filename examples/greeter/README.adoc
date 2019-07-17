@@ -4,12 +4,25 @@ This greeter server is a REST server that transparently supports the Websocket
 protocol. This Websocket binding is originated from Atmosphere's websocket binding [1],
 which in turn is originated from SwaggerSocket[2].
 
-This binding can be considered as a simplified yet more efficient and flexible version of its predecessor.
+This binding can be considered as a simplified yet more efficient and flexible version of its predecessors.
 
-The server side code has been generated from the included https://raw.githubusercontent.com/elakito/swagsock/master/examples/greeter/swagger.yaml[swagger.yaml] using go swagger (version 0.19.0) by
+The server side code has been generated from the included https://raw.githubusercontent.com/elakito/swagsock/master/examples/greeter/swagger.yaml[swagger.yaml] using go swagger (version 0.19.0) by command
 ----
 $ swagger generate server -f swagger.yaml -A greeter-demo
 ----
+
+The greeter service provides the following operations.
+
+ping        -  ping the service
+echo        -  echo back the message
+greet       -  greet one specific person or everyone
+status      -  return the greeting status
+summary     -  return the greeting summary
+subscribe   -  subscribe to the greeting channel to be greeted
+unsubscribe -  unsubscribe from the greeting channel
+
+
+The last two operations take advantage of Websocket and the subscribed client can receive messages when someone greets the user associated with the client.
 
 
 ===== Run
@@ -29,7 +42,7 @@ and open the page http://localhost:8091/swagger.json to view its swagger documen
 
 To try out its Websocket protocol support, run the node client located in https://github.com/elakito/swagsock/tree/master/examples/clients/node-client[examples/clients/node-client].
 
-To start this client, run
+To start this client against the above locally started greeter service, run
 ----
 $ npm install
 $ node client.js
@@ -37,7 +50,7 @@ $ node client.js
 
 .Console
 ----
-$ node client.js
+$ node client.js -v
 Host URL: http://localhost:8091/samples/greeter
 Choose user ...
 user: elakito
@@ -45,23 +58,46 @@ Connecting using websocket ...
 elakito> Connected using websocket
 elakito> ping
 TRACE: sending  {"id":"0","method":"GET","path":"/v1/ping"}
-elakito> TRACE: received {"code":200,"id":"0","type":"application/json"}{"pong":4}
-elakito> res0: {"code":200,"id":"0","type":"application/json"}{"pong":4}
+elakito> TRACE: received {"code":200,"id":"0","type":"application/json"}{"pong":1}
+elakito> res0: {"code":200,"id":"0","type":"application/json"}{"pong":1}
 elakito> echo buenos dias
 TRACE: sending  {"id":"1","method":"POST","path":"/v1/echo","type":"text/plain"}buenos dias
 elakito> TRACE: received {"code":200,"id":"1","type":"application/json"}{"echo":"buenos dias"}
 elakito> res1: {"code":200,"id":"1","type":"application/json"}{"echo":"buenos dias"}
 elakito> greet estrella hola
-TRACE: sending  {"id":"2","method":"POST","path":"/v1/greet/estrella","type":"application/json"}{"name":"elakito","text":"hola"}
+TRACE: sending  {"id":"2","method":"POST","path":"/v1/greet/elakito","type":"application/json"}{"name":"estrella","text":"hola"}
 elakito> TRACE: received {"code":200,"id":"2","type":"application/json"}{"from":"elakito","name":"estrella","text":"hola"}
 elakito> res2: {"code":200,"id":"2","type":"application/json"}{"from":"elakito","name":"estrella","text":"hola"}
 elakito> status estrella
 TRACE: sending  {"id":"3","method":"GET","path":"/v1/greet/estrella"}
-elakito> TRACE: received {"code":200,"id":"3","type":"application/json"}{"count":1,"name":"estrella"}
-elakito> res3: {"code":200,"id":"3","type":"application/json"}{"count":1,"name":"estrella"}
+elakito> TRACE: received {"code":200,"id":"3","type":"application/json"}{"name":"estrella"}
+elakito> res3: {"code":200,"id":"3","type":"application/json"}{"name":"estrella"}
 elakito> summary
 TRACE: sending  {"id":"4","method":"GET","path":"/v1/greet"}
-elakito> TRACE: received {"code":200,"id":"4","type":"application/json"}{"greeted":["petra","estrella"],"total":3}
-elakito> res4: {"code":200,"id":"4","type":"application/json"}{"greeted":["petra","estrella"],"total":3}
-elakito>
+elakito> TRACE: received {"code":200,"id":"4","type":"application/json"}{"greeted":["elakito"],"total":1}
+elakito> res4: {"code":200,"id":"4","type":"application/json"}{"greeted":["elakito"],"total":1}
+elakito> subscribe
+TRACE: sending  {"id":"5","method":"GET","path":"/v1/subscribe/elakito"}
+elakito> TRACE: received {"code":200,"id":"5","type":"application/json"}[]
+elakito> res5: {"code":200,"id":"5","type":"application/json"}[]
+elakito> TRACE: received {"code":200,"id":"5","type":"application/json"}{"from":"estrella","name":"*","text":"hola"}
+elakito> res5: {"code":200,"id":"5","type":"application/json"}{"from":"estrella","name":"*","text":"hola"}
+elakito> 
 ----
+
+----
+$ node client.js
+Host URL: http://localhost:8091/samples/greeter
+Choose user ...
+user: estrella
+Connecting using websocket ...
+estrella> Connected using websocket
+estrella> ping
+estrella> res0: {"code":200,"id":"0","type":"application/json"}{"pong":2}
+estrella> subscribe
+estrella> res1: {"code":200,"id":"1","type":"application/json"}[]
+estrella> res1: {"code":200,"id":"1","type":"application/json"}{"from":"elakito","name":"estrella","text":"hola"}
+estrella> greet * hola
+estrella> res1: {"code":200,"id":"1","type":"application/json"}{"from":"estrella","name":"*","text":"hola"}
+estrella> res2: {"code":200,"id":"2","type":"application/json"}{"from":"estrella","name":"*","text":"hola"}
+estrella> 

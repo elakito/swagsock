@@ -23,10 +23,40 @@ import (
 //go:generate swagger generate server --target .. --name greeter-demo --spec ../swagger.yaml
 
 var (
-	counter    int32
-	greeted    = make(map[string]int32)
-	statuslock = &sync.RWMutex{}
+	counter       int32
+	greeted       = make(map[string]int32)
+	statuslock    = &sync.RWMutex{}
+	subscriptions = make(map[string]*greetingSubscription)
 )
+
+type greetingSubscription struct {
+	name string
+	sub  *swagsock.ReusableResponder
+}
+
+func getGreetSummary() (int32, []string) {
+	var total int32
+	names := make([]string, 0, len(greeted))
+	statuslock.RLock()
+	defer statuslock.RUnlock()
+	for name, count := range greeted {
+		names = append(names, name)
+		total += count
+	}
+	return total, names
+}
+
+func getGreetStatus(name string) int32 {
+	statuslock.RLock()
+	defer statuslock.RUnlock()
+	return greeted[name]
+}
+
+func updateGreet(name string) {
+	statuslock.Lock()
+	defer statuslock.Unlock()
+	greeted[name]++
+}
 
 func configureFlags(api *operations.GreeterDemoAPI) {
 	// api.CommandLineOptionsGroups = []swag.CommandLineOptionsGroup{ ... }
@@ -55,29 +85,27 @@ func configureAPI(api *operations.GreeterDemoAPI) http.Handler {
 		return operations.NewEchoOK().WithPayload(&models.EchoReply{Echo: params.Body})
 	})
 	api.GetGreetStatusHandler = operations.GetGreetStatusHandlerFunc(func(params operations.GetGreetStatusParams) middleware.Responder {
-		return operations.NewGetGreetStatusOK().WithPayload(&models.GreetingStatus{Name: params.Name, Count: greeted[params.Name]})
+		count := getGreetStatus(params.Name)
+		return operations.NewGetGreetStatusOK().WithPayload(&models.GreetingStatus{Name: params.Name, Count: count})
 	})
 	api.GetGreetSummaryHandler = operations.GetGreetSummaryHandlerFunc(func(params operations.GetGreetSummaryParams) middleware.Responder {
-		var total int32
-		gnames := make([]string, 0, len(greeted))
-		statuslock.RLock()
-		for name, count := range greeted {
-			gnames = append(gnames, name)
-			total += count
-		}
-		statuslock.RUnlock()
+		total, gnames := getGreetSummary()
 		return operations.NewGetGreetSummaryOK().WithPayload(&models.GreetingSummary{Greeted: gnames, Total: total})
 	})
 	api.GreetHandler = operations.GreetHandlerFunc(func(params operations.GreetParams) middleware.Responder {
 		if params.Name == "" || params.Body == nil {
 			return &errorResp{http.StatusBadRequest, "operation .Greet requires name parameter and json body", make(http.Header)}
 		}
-		statuslock.Lock()
-		gcounter := greeted[params.Name]
-		gcounter++
-		greeted[params.Name] = gcounter
-		statuslock.Unlock()
-		return operations.NewGreetOK().WithPayload(&models.GreetingReply{From: params.Body.Name, Name: params.Name, Text: params.Body.Text})
+		updateGreet(params.Name)
+		payload := &models.GreetingReply{From: params.Name, Name: params.Body.Name, Text: params.Body.Text}
+		pb, _ := payload.MarshalBinary()
+		//TODO guard against concurrency and support reconnection-awareness
+		for _, subscription := range subscriptions {
+			if params.Body.Name == "*" || subscription.name == params.Body.Name {
+				subscription.sub.Write(pb)
+			}
+		}
+		return operations.NewGreetOK().WithPayload(payload)
 	})
 	api.PingHandler = operations.PingHandlerFunc(func(params operations.PingParams) middleware.Responder {
 		return operations.NewPingOK().WithPayload(&models.Pong{Pong: atomic.AddInt32(&counter, 1)})
@@ -89,6 +117,19 @@ func configureAPI(api *operations.GreeterDemoAPI) http.Handler {
 			params.File.Close()
 		}
 		return operations.NewUploadOK().WithPayload(&models.UploadStatus{Name: params.Name, Size: int32(size)})
+	})
+	api.SubscribeHandler = operations.SubscribeHandlerFunc(func(params operations.SubscribeParams) middleware.Responder {
+		responder := swagsock.NewReusableResponder(operations.NewSubscribeOK())
+		id := swagsock.GetRequestID(params.HTTPRequest)
+		subscriptions[id] = &greetingSubscription{name: params.Name, sub: responder}
+		return responder
+	})
+	api.UnsubscribeHandler = operations.UnsubscribeHandlerFunc(func(params operations.UnsubscribeParams) middleware.Responder {
+		if _, ok := subscriptions[params.Sid]; ok {
+			delete(subscriptions, params.Sid)
+		}
+		total, gnames := getGreetSummary()
+		return operations.NewGetGreetSummaryOK().WithPayload(&models.GreetingSummary{Greeted: gnames, Total: total})
 	})
 
 	api.ServerShutdown = func() {}

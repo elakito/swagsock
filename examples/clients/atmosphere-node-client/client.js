@@ -4,7 +4,10 @@
  * An atmosphere node client program to interactively calls the greeter service
  * 
  * Usages: 
- * node client.js [greeter-url]
+ * node client.js [options] [greeter-url]
+ *
+ * Options:
+ *   -v    enable verbose mode
  *
  * Usage Samples:
  * node client.js http://localhost:8091/samples/greeter
@@ -14,13 +17,18 @@
 "use strict";
 
 var HOST_URL = 'http://localhost:8091/samples/greeter';
-var TRACE = true;
+
+var trace = false;
 
 var hosturl = HOST_URL;
 
 var arg;
 for (var i = 2; i < process.argv.length; i++) {
     arg = process.argv[i];
+    if (arg === "-v") {
+        trace = true;
+        arg = undefined;
+    }
 }
 if (arg != undefined) {
     hosturl = arg;
@@ -45,12 +53,14 @@ var count = 0;
 
 // greeter's consle commands
 const COMMAND_LIST = 
-    [["ping",     "Ping", "ping"],
-     ["echo",     "Echo the message", "echo text"],
-     ["greet",    "Greet the person", "greet name text"],
-     ["status",   "Display the greeting status", "status name"],
-     ["summary",  "Display the greeting summary", "summary"],
-     ["quit",     "Quit the application", "quit"]];
+    [["ping",       "Ping", "ping"],
+     ["echo",       "Echo the message", "echo text"],
+     ["greet",      "Greet the person", "greet name text"],
+     ["status",     "Display the greeting status", "status name"],
+     ["summary",    "Display the greeting summary", "summary"],
+     ["subscribe",  "Subscribe to the greeting events", "subscribe"],
+     ["unsubscribe","Unsubscribe from the greeting events", "unsubscribe sid"],
+     ["quit",       "Quit the application", "quit"]];
 
 
 /////////////// utilities
@@ -174,9 +184,9 @@ function doGreet(v) {
         errorUsage("greet");
         return;
     }
-    var req = atmosphere.util.stringifyJSON({ "id": getNextId(), "method": "POST", "path": "/v1/greet/" + v[0], "type": "application/json"})+atmosphere.util.stringifyJSON({ "name": user, "text": v[1]});
+    var req = atmosphere.util.stringifyJSON({ "id": getNextId(), "method": "POST", "path": "/v1/greet/" + user, "type": "application/json"})+atmosphere.util.stringifyJSON({ "name": v[0], "text": v[1]});
 
-    if (TRACE) {
+    if (trace) {
         console.log("TRACE: sending ", req);
     }
     subSocket.push(req);
@@ -189,7 +199,7 @@ function doStatus(v) {
     }
     var req = atmosphere.util.stringifyJSON({ "id": getNextId(), "method": "GET", "path": "/v1/greet/" + v[0]});
 
-    if (TRACE) {
+    if (trace) {
         console.log("TRACE: sending ", req);
     }
     subSocket.push(req);
@@ -198,7 +208,25 @@ function doStatus(v) {
 function doSummary(v) {
     var req = atmosphere.util.stringifyJSON({ "id": getNextId(), "method": "GET", "path": "/v1/greet"});
 
-    if (TRACE) {
+    if (trace) {
+        console.log("TRACE: sending ", req);
+    }
+    subSocket.push(req);
+}
+
+function doSubscribe(v) {
+    var req = atmosphere.util.stringifyJSON({ "id": getNextId(), "method": "GET", "path": "/v1/subscribe/" + user});
+
+    if (trace) {
+        console.log("TRACE: sending ", req);
+    }
+    subSocket.push(req);
+}
+
+function doUnsubscribe(v) {
+    var req = atmosphere.util.stringifyJSON({ "id": getNextId(), "method": "DELETE", "path": "/v1/unsubscribe/" + v[0]});
+
+    if (trace) {
         console.log("TRACE: sending ", req);
     }
     subSocket.push(req);
@@ -207,7 +235,7 @@ function doSummary(v) {
 function doPing(v) {
     var req = atmosphere.util.stringifyJSON({ "id": getNextId(), "method": "GET", "path": "/v1/ping"});
 
-    if (TRACE) {
+    if (trace) {
         console.log("TRACE: sending ", req);
     }
     subSocket.push(req);
@@ -220,7 +248,7 @@ function doEcho(v) {
     }
     var req = atmosphere.util.stringifyJSON({ "id": getNextId(), "method": "POST", "path": "/v1/echo", "type": "text/plain"})+v[0];
 
-    if (TRACE) {
+    if (trace) {
         console.log("TRACE: sending ", req);
     }
     subSocket.push(req);
@@ -269,7 +297,7 @@ request.onMessage = function (response) {
     if (json.heartbeat) {
         // ignore
     } else {
-        if (TRACE) {
+        if (trace) {
             console.log("TRACE: received " + message);
             prompt.setPrompt(userprompt, 2);
             prompt.prompt();
@@ -333,6 +361,10 @@ on('line', function(line) {
             doStatus(getArgs("status", msg, 1));
         } else if (msg.indexOf("summary") == 0) {
             doSummary();
+        } else if (msg.indexOf("subscribe") == 0) {
+            doSubscribe();
+        } else if (msg.indexOf("unsubscribe") == 0) {
+            doUnsubscribe(getArgs("unsubscribe", msg, 1));
         } else if (msg.indexOf("quit") == 0) {
             doQuit();
         } else {

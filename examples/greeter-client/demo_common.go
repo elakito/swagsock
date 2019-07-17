@@ -59,3 +59,7 @@ func perform(client *apiclient.GreeterDemo) {
 	jsonpayload, _ = json.Marshal(getGreetSummaryOK.Payload)
 	fmt.Printf("GetGreetSummary-Response: %s\n", jsonpayload)
 }
+
+func doPing() {
+
+}

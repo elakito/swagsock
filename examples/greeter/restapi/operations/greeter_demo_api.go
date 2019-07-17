@@ -54,6 +54,12 @@ func NewGreeterDemoAPI(spec *loads.Document) *GreeterDemoAPI {
 		PingHandler: PingHandlerFunc(func(params PingParams) middleware.Responder {
 			return middleware.NotImplemented("operation Ping has not yet been implemented")
 		}),
+		SubscribeHandler: SubscribeHandlerFunc(func(params SubscribeParams) middleware.Responder {
+			return middleware.NotImplemented("operation Subscribe has not yet been implemented")
+		}),
+		UnsubscribeHandler: UnsubscribeHandlerFunc(func(params UnsubscribeParams) middleware.Responder {
+			return middleware.NotImplemented("operation Unsubscribe has not yet been implemented")
+		}),
 		UploadHandler: UploadHandlerFunc(func(params UploadParams) middleware.Responder {
 			return middleware.NotImplemented("operation Upload has not yet been implemented")
 		}),
@@ -102,6 +108,10 @@ type GreeterDemoAPI struct {
 	GreetHandler GreetHandler
 	// PingHandler sets the operation handler for the ping operation
 	PingHandler PingHandler
+	// SubscribeHandler sets the operation handler for the subscribe operation
+	SubscribeHandler SubscribeHandler
+	// UnsubscribeHandler sets the operation handler for the unsubscribe operation
+	UnsubscribeHandler UnsubscribeHandler
 	// UploadHandler sets the operation handler for the upload operation
 	UploadHandler UploadHandler
 
@@ -193,6 +203,14 @@ func (o *GreeterDemoAPI) Validate() error {
 
 	if o.PingHandler == nil {
 		unregistered = append(unregistered, "PingHandler")
+	}
+
+	if o.SubscribeHandler == nil {
+		unregistered = append(unregistered, "SubscribeHandler")
+	}
+
+	if o.UnsubscribeHandler == nil {
+		unregistered = append(unregistered, "UnsubscribeHandler")
 	}
 
 	if o.UploadHandler == nil {
@@ -327,6 +345,16 @@ func (o *GreeterDemoAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/v1/ping"] = NewPing(o.context, o.PingHandler)
+
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/v1/subscribe/{name}"] = NewSubscribe(o.context, o.SubscribeHandler)
+
+	if o.handlers["DELETE"] == nil {
+		o.handlers["DELETE"] = make(map[string]http.Handler)
+	}
+	o.handlers["DELETE"]["/v1/unsubscribe/{sid}"] = NewUnsubscribe(o.context, o.UnsubscribeHandler)
 
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
