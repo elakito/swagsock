@@ -31,7 +31,7 @@ func NewSubscribe(ctx *middleware.Context, handler SubscribeHandler) *Subscribe 
 
 /*Subscribe swagger:route GET /v1/subscribe/{name} subscribe
 
-Subscriber to the greeting events
+Subscribe to the greeting events
 
 Subscribe to the greeteing events
 

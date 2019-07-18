@@ -33,7 +33,7 @@ func perform(client *apiclient.GreeterDemo) {
 	fmt.Printf("Echo-Response: %s\n", jsonpayload)
 
 	// greet
-	greetBody := &apimodels.Body{Name: "foo", Text: "hola"}
+	greetBody := &apimodels.Greeting{Name: "foo", Text: "hola"}
 	greetParams := apioperations.NewGreetParams().WithName("bar").WithBody(greetBody)
 	greetOK, err := client.Operations.Greet(greetParams)
 	if err != nil {

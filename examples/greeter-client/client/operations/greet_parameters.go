@@ -67,7 +67,7 @@ type GreetParams struct {
 	  A greeting message
 
 	*/
-	Body *models.Body
+	Body *models.Greeting
 	/*Name
 	  greeter's name
 
@@ -113,13 +113,13 @@ func (o *GreetParams) SetHTTPClient(client *http.Client) {
 }
 
 // WithBody adds the body to the greet params
-func (o *GreetParams) WithBody(body *models.Body) *GreetParams {
+func (o *GreetParams) WithBody(body *models.Greeting) *GreetParams {
 	o.SetBody(body)
 	return o
 }
 
 // SetBody adds the body to the greet params
-func (o *GreetParams) SetBody(body *models.Body) {
+func (o *GreetParams) SetBody(body *models.Greeting) {
 	o.Body = body
 }
 

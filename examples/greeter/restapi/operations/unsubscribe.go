@@ -31,7 +31,7 @@ func NewUnsubscribe(ctx *middleware.Context, handler UnsubscribeHandler) *Unsubs
 
 /*Unsubscribe swagger:route DELETE /v1/unsubscribe/{sid} unsubscribe
 
-Unsubscriber from the greeting events
+Unsubscribe from the greeting events
 
 Unsubscribe from the greeting events
 

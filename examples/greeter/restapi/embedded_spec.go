@@ -31,7 +31,7 @@ func init() {
       "name": "Apache 2.0",
       "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
     },
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "basePath": "/samples/greeter",
   "paths": {
@@ -135,7 +135,7 @@ func init() {
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/body"
+              "$ref": "#/definitions/greeting"
             }
           }
         ],
@@ -215,7 +215,7 @@ func init() {
         "produces": [
           "application/json"
         ],
-        "summary": "Subscriber to the greeting events",
+        "summary": "Subscribe to the greeting events",
         "operationId": "subscribe",
         "parameters": [
           {
@@ -245,7 +245,7 @@ func init() {
         "produces": [
           "application/json"
         ],
-        "summary": "Unsubscriber from the greeting events",
+        "summary": "Unsubscribe from the greeting events",
         "operationId": "unsubscribe",
         "parameters": [
           {
@@ -268,19 +268,6 @@ func init() {
     }
   },
   "definitions": {
-    "body": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "description": "greeting person",
-          "type": "string"
-        },
-        "text": {
-          "description": "greeting text",
-          "type": "string"
-        }
-      }
-    },
     "echoReply": {
       "type": "object",
       "properties": {
@@ -396,7 +383,7 @@ func init() {
       "name": "Apache 2.0",
       "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
     },
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "basePath": "/samples/greeter",
   "paths": {
@@ -500,7 +487,7 @@ func init() {
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/body"
+              "$ref": "#/definitions/greeting"
             }
           }
         ],
@@ -580,7 +567,7 @@ func init() {
         "produces": [
           "application/json"
         ],
-        "summary": "Subscriber to the greeting events",
+        "summary": "Subscribe to the greeting events",
         "operationId": "subscribe",
         "parameters": [
           {
@@ -610,7 +597,7 @@ func init() {
         "produces": [
           "application/json"
         ],
-        "summary": "Unsubscriber from the greeting events",
+        "summary": "Unsubscribe from the greeting events",
         "operationId": "unsubscribe",
         "parameters": [
           {
@@ -633,19 +620,6 @@ func init() {
     }
   },
   "definitions": {
-    "body": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "description": "greeting person",
-          "type": "string"
-        },
-        "text": {
-          "description": "greeting text",
-          "type": "string"
-        }
-      }
-    },
     "echoReply": {
       "type": "object",
       "properties": {

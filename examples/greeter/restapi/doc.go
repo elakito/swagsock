@@ -14,7 +14,7 @@ http://www.github.com/elakito/swaggersocket/
       https
     Host: localhost
     BasePath: /samples/greeter
-    Version: 1.0.0
+    Version: 1.0.1
     License: Apache 2.0 http://www.apache.org/licenses/LICENSE-2.0.html
 
     Consumes:

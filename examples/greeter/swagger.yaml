@@ -2,7 +2,7 @@
 swagger: "2.0"
 info:
   description: "This is a greeter demo."
-  version: "1.0.0"
+  version: "1.0.1"
   title: "greeter demo API"
   termsOfService: "http://www.github.com/elakito/swaggersocket/"
   license:
@@ -84,7 +84,7 @@ paths:
         description: "A greeting message"
         required: true
         schema:
-          $ref: "#/definitions/body"
+          $ref: "#/definitions/greeting"
       responses:
         200:
           description: "A greeting response"
@@ -134,7 +134,7 @@ paths:
             $ref: "#/definitions/pong"
   /v1/subscribe/{name}:
     get:
-      summary: "Subscriber to the greeting events"
+      summary: "Subscribe to the greeting events"
       description: "Subscribe to the greeteing events"
       operationId: "subscribe"
       produces:
@@ -154,7 +154,7 @@ paths:
               $ref: "#/definitions/greetingReply"
   /v1/unsubscribe/{sid}:
     delete:
-      summary: "Unsubscriber from the greeting events"
+      summary: "Unsubscribe from the greeting events"
       description: "Unsubscribe from the greeting events"
       operationId: "unsubscribe"
       produces:
@@ -240,12 +240,3 @@ definitions:
         type: "integer"
         format: "int32"
         description: "greeting card size"
-  body:
-    type: "object"
-    properties:
-      name:
-        type: "string"
-        description: "greeting person"
-      text:
-        type: "string"
-        description: "greeting text"

@@ -175,7 +175,7 @@ func (a *Client) Ping(params *PingParams) (*PingOK, error) {
 }
 
 /*
-Subscribe subscribers to the greeting events
+Subscribe subscribes to the greeting events
 
 Subscribe to the greeteing events
 */
@@ -205,7 +205,7 @@ func (a *Client) Subscribe(params *SubscribeParams) (*SubscribeOK, error) {
 }
 
 /*
-Unsubscribe unsubscribers from the greeting events
+Unsubscribe unsubscribes from the greeting events
 
 Unsubscribe from the greeting events
 */

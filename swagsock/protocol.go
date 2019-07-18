@@ -25,6 +25,7 @@ var websocketUpgrader = websocket.Upgrader{
 	},
 }
 
+// NewDefaultCodec returns an instance of the default Codec
 func NewDefaultCodec() Codec {
 	return &defaultCodec{}
 }
@@ -68,7 +69,7 @@ func copyValue(src map[string]interface{}, target map[string]interface{}, key st
 	}
 }
 
-// Create a new ProtocolHandler with the specified codec. If codec is nil, the defaultCodec is used
+// CreateProtocolHandler creates a new ProtocolHandler with the specified codec. If codec is nil, the defaultCodec is used
 func CreateProtocolHandler(codec Codec) ProtocolHandler {
 	if codec == nil {
 		codec = NewDefaultCodec()
@@ -103,8 +104,8 @@ func (ph *protocolHandler) Serve(handler http.Handler, w http.ResponseWriter, r 
 				ph.deleteConnection(conn)
 				break
 			}
-			id, req := newHttpRequest(baseURI, p, ph.codec)
-			resp := newHttpResponse(id, mt, conn, ph.codec)
+			id, req := newHTTPRequest(baseURI, p, ph.codec)
+			resp := newHTTPResponse(id, mt, conn, ph.codec)
 			handler.ServeHTTP(resp, req)
 		}
 	}()
@@ -113,7 +114,7 @@ func (ph *protocolHandler) Serve(handler http.Handler, w http.ResponseWriter, r 
 func (ph *protocolHandler) Destroy() {
 	ph.RLock()
 	defer ph.RUnlock()
-	for con, _ := range ph.connections {
+	for con := range ph.connections {
 		con.Close()
 	}
 }
@@ -130,7 +131,7 @@ func (ph *protocolHandler) deleteConnection(conn *websocket.Conn) {
 	delete(ph.connections, conn)
 }
 
-func newHttpRequest(baseURI string, data []byte, codec Codec) (string, *http.Request) {
+func newHTTPRequest(baseURI string, data []byte, codec Codec) (string, *http.Request) {
 	headers, body, err := codec.DecodeSwaggerSocketMessage(data)
 	if err != nil {
 		//TODO return the error
@@ -140,9 +141,9 @@ func newHttpRequest(baseURI string, data []byte, codec Codec) (string, *http.Req
 	req.RequestURI = uri
 	//TODO for the id, we should transfer both the client specific id and the client identifier so that
 	// a multi-response sequence can survive reconnection and that multiple clients don't interfer each other.
-	copyHeaderToHttpHeaders(headers, "id", req.Header, "X-Request-Id")
-	copyHeaderToHttpHeaders(headers, "type", req.Header, "Content-Type")
-	copyHeaderToHttpHeaders(headers, "accept", req.Header, "Accept")
+	copyHeaderToHTTPHeaders(headers, "id", req.Header, "X-Request-Id")
+	copyHeaderToHTTPHeaders(headers, "type", req.Header, "Content-Type")
+	copyHeaderToHTTPHeaders(headers, "accept", req.Header, "Accept")
 	if aheaders, ok := headers["headers"].(map[string]interface{}); ok {
 		for aheader, avalue := range aheaders {
 			req.Header.Add(aheader, avalue.(string))
@@ -151,7 +152,7 @@ func newHttpRequest(baseURI string, data []byte, codec Codec) (string, *http.Req
 	return getHeader(headers, "id"), req
 }
 
-func newHttpResponse(id string, messageType int, conn *websocket.Conn, codec Codec) http.ResponseWriter {
+func newHTTPResponse(id string, messageType int, conn *websocket.Conn, codec Codec) http.ResponseWriter {
 	resp := &response{id: id, messageType: messageType, headers: make(http.Header), conn: conn, codec: codec}
 	return resp
 }
@@ -190,7 +191,7 @@ func (r *response) buildHeaders() map[string]interface{} {
 	headers := make(map[string]interface{})
 	headers["id"] = r.id
 	headers["code"] = r.code
-	copyHttpHeaderToHeaders(r.headers, "Content-Type", headers, "type")
+	copyHTTPHeaderToHeaders(r.headers, "Content-Type", headers, "type")
 	//TODO fill other headers
 	return headers
 }
@@ -203,13 +204,13 @@ func getHeader(headers map[string]interface{}, key string) string {
 	return ""
 }
 
-func copyHeaderToHttpHeaders(src map[string]interface{}, srckey string, target http.Header, targetkey string) {
+func copyHeaderToHTTPHeaders(src map[string]interface{}, srckey string, target http.Header, targetkey string) {
 	if v, ok := src[srckey]; ok {
 		target.Add(targetkey, v.(string))
 	}
 }
 
-func copyHttpHeaderToHeaders(src http.Header, srckey string, target map[string]interface{}, targetkey string) {
+func copyHTTPHeaderToHeaders(src http.Header, srckey string, target map[string]interface{}, targetkey string) {
 	if v := src.Get(srckey); v != "" {
 		target[targetkey] = v
 	}
@@ -227,7 +228,7 @@ func getBaseURI(r *http.Request) string {
 	return baseURI
 }
 
-// based on the jetty's websocket check
+// IsWebsocketUpgradeRequested checks if the request is an upgrade request (based on the jetty's websocket check)
 func IsWebsocketUpgradeRequested(r *http.Request) bool {
 	if "GET" != r.Method {
 		return false
@@ -249,20 +250,24 @@ func IsWebsocketUpgradeRequested(r *http.Request) bool {
 }
 
 // utilities
+
+// GetRequestID returns the swagger socket request id
 func GetRequestID(req *http.Request) string {
 	return req.Header.Get("X-Request-Id")
 }
 
+// NewReusableResponder wraps the original responder to capture the underlining durable connection for later use
 func NewReusableResponder(r middleware.Responder) *ReusableResponder {
 	return &ReusableResponder{responder: r}
 }
 
-// ReusableResponder is a middleware.Responder which grab the http.ResponseWriter for later reuse.
+// ReusableResponder is a middleware.Responder which grab the http.ResponseWriter for later reuse
 type ReusableResponder struct {
 	responder middleware.Responder
 	writer    http.ResponseWriter
 }
 
+// WriteResponse writes to the response
 func (r *ReusableResponder) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
 	if r.writer == nil {
 		r.writer = rw

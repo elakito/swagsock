@@ -4,6 +4,7 @@ import (
 	"net/http"
 )
 
+// Codec is the interface that wraps the decode and encode methods.
 type Codec interface {
 	// Decodes the swaggersocket wire message into its map part and the body part
 	DecodeSwaggerSocketMessage(data []byte) (map[string]interface{}, []byte, error)
@@ -11,6 +12,7 @@ type Codec interface {
 	EncodeSwaggerSocketMessage(headers map[string]interface{}, body []byte) ([]byte, error)
 }
 
+// ProtocolHandler is the interface to interact with the protocol handler
 type ProtocolHandler interface {
 	// Returns the codec instance used by this protocol handler
 	GetCodec() Codec
