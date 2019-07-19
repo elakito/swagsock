@@ -50,54 +50,51 @@ $ node client.js
 
 .Console
 ----
-$ node client.js -v
-Host URL: http://localhost:8091/samples/greeter
+$ node client.js -c client1
+Client ID: client1
+Host URL: http://localhost:8091/samples/greeter (No Authentication)
 Choose user ...
 user: elakito
 Connecting using websocket ...
 elakito> Connected using websocket
 elakito> ping
-TRACE: sending  {"id":"0","method":"GET","path":"/v1/ping"}
-elakito> TRACE: received {"code":200,"id":"0","type":"application/json"}{"pong":1}
-elakito> res0: {"code":200,"id":"0","type":"application/json"}{"pong":1}
+elakito> res0: {"code":200,"id":"0","type":"application/json"}{"pong":2}
 elakito> echo buenos dias
-TRACE: sending  {"id":"1","method":"POST","path":"/v1/echo","type":"text/plain"}buenos dias
-elakito> TRACE: received {"code":200,"id":"1","type":"application/json"}{"echo":"buenos dias"}
 elakito> res1: {"code":200,"id":"1","type":"application/json"}{"echo":"buenos dias"}
-elakito> greet estrella hola
-TRACE: sending  {"id":"2","method":"POST","path":"/v1/greet/elakito","type":"application/json"}{"name":"estrella","text":"hola"}
-elakito> TRACE: received {"code":200,"id":"2","type":"application/json"}{"from":"elakito","name":"estrella","text":"hola"}
-elakito> res2: {"code":200,"id":"2","type":"application/json"}{"from":"elakito","name":"estrella","text":"hola"}
-elakito> status estrella
-TRACE: sending  {"id":"3","method":"GET","path":"/v1/greet/estrella"}
-elakito> TRACE: received {"code":200,"id":"3","type":"application/json"}{"name":"estrella"}
-elakito> res3: {"code":200,"id":"3","type":"application/json"}{"name":"estrella"}
-elakito> summary
-TRACE: sending  {"id":"4","method":"GET","path":"/v1/greet"}
-elakito> TRACE: received {"code":200,"id":"4","type":"application/json"}{"greeted":["elakito"],"total":1}
-elakito> res4: {"code":200,"id":"4","type":"application/json"}{"greeted":["elakito"],"total":1}
 elakito> subscribe
-TRACE: sending  {"id":"5","method":"GET","path":"/v1/subscribe/elakito"}
-elakito> TRACE: received {"code":200,"id":"5","type":"application/json"}[]
-elakito> res5: {"code":200,"id":"5","type":"application/json"}[]
-elakito> TRACE: received {"code":200,"id":"5","type":"application/json"}{"from":"estrella","name":"*","text":"hola"}
-elakito> res5: {"code":200,"id":"5","type":"application/json"}{"from":"estrella","name":"*","text":"hola"}
+elakito> res2: {"code":200,"id":"2","type":"application/json"}[]
+elakito> greet estrella hola estrella
+elakito> res3: {"code":200,"id":"3","type":"application/json"}{"from":"elakito","name":"estrella","text":"hola estrella"}
+elakito> res2: {"code":200,"id":"2","type":"application/json"}{"from":"estrella","name":"elakito","text":"hola elakito!"}
+elakito> res2: {"code":200,"id":"2","type":"application/json"}{"from":"estrella","name":"*","text":"hola a todos!!"}
+elakito> status elakito
+elakito> res4: {"code":200,"id":"4","type":"application/json"}{"count":2,"name":"elakito"}
+elakito> status estrella
+elakito> res5: {"code":200,"id":"5","type":"application/json"}{"count":4,"name":"estrella"}
+elakito> summary
+elakito> res6: {"code":200,"id":"6","type":"application/json"}{"greeted":["elakito","estrella"],"total":6}
 elakito> 
 ----
 
 ----
-$ node client.js
-Host URL: http://localhost:8091/samples/greeter
+$ node client.js -c client2
+Client ID: client2
+Host URL: http://localhost:8091/samples/greeter (No Authentication)
 Choose user ...
 user: estrella
 Connecting using websocket ...
 estrella> Connected using websocket
-estrella> ping
-estrella> res0: {"code":200,"id":"0","type":"application/json"}{"pong":2}
 estrella> subscribe
-estrella> res1: {"code":200,"id":"1","type":"application/json"}[]
-estrella> res1: {"code":200,"id":"1","type":"application/json"}{"from":"elakito","name":"estrella","text":"hola"}
-estrella> greet * hola
-estrella> res1: {"code":200,"id":"1","type":"application/json"}{"from":"estrella","name":"*","text":"hola"}
-estrella> res2: {"code":200,"id":"2","type":"application/json"}{"from":"estrella","name":"*","text":"hola"}
+estrella> res0: {"code":200,"id":"0","type":"application/json"}[]
+estrella> res0: {"code":200,"id":"0","type":"application/json"}{"from":"elakito","name":"estrella","text":"hola estrella"}
+estrella> hola elakito hola elakito!
+Error: Uknown command: hola elakito hola elakito!
+estrella> greet elakito hola elakito!
+estrella> res1: {"code":200,"id":"1","type":"application/json"}{"from":"estrella","name":"elakito","text":"hola elakito!"}
+estrella> greet * hola a todos!!
+estrella> res0: {"code":200,"id":"0","type":"application/json"}{"from":"estrella","name":"*","text":"hola a todos!!"}
+estrella> res2: {"code":200,"id":"2","type":"application/json"}{"from":"estrella","name":"*","text":"hola a todos!!"}
+estrella> unsubscribe 0
+estrella> res3: {"code":200,"id":"3","type":"application/json"}{"greeted":["elakito","estrella"],"total":6}
 estrella> 
+----

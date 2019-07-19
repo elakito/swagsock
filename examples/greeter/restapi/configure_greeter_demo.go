@@ -120,14 +120,14 @@ func configureAPI(api *operations.GreeterDemoAPI) http.Handler {
 	})
 	api.SubscribeHandler = operations.SubscribeHandlerFunc(func(params operations.SubscribeParams) middleware.Responder {
 		responder := swagsock.NewReusableResponder(operations.NewSubscribeOK())
-		id := swagsock.GetRequestID(params.HTTPRequest)
+		id := swagsock.GetRequestKey(params.HTTPRequest)
 		subscriptions[id] = &greetingSubscription{name: params.Name, sub: responder}
 		return responder
 	})
 	api.UnsubscribeHandler = operations.UnsubscribeHandlerFunc(func(params operations.UnsubscribeParams) middleware.Responder {
-		if _, ok := subscriptions[params.Sid]; ok {
-			delete(subscriptions, params.Sid)
-		}
+		id := swagsock.GetRequestKey(params.HTTPRequest)
+		unsubid := swagsock.GetDerivedRequestKey(id, params.Sid)
+		delete(subscriptions, unsubid)
 		total, gnames := getGreetSummary()
 		return operations.NewGetGreetSummaryOK().WithPayload(&models.GreetingSummary{Greeted: gnames, Total: total})
 	})

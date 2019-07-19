@@ -16,6 +16,11 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const (
+	// Revist the name of this internal header that represents the client-id and request-id pair
+	headerRequestKey = "X-Request-Key"
+)
+
 var websocketUpgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
@@ -95,6 +100,7 @@ func (ph *protocolHandler) Serve(handler http.Handler, w http.ResponseWriter, r 
 	}
 	ph.addConnetion(conn)
 	baseURI := getBaseURI(r)
+	clientID := getClientID(r)
 
 	go func() {
 		for {
@@ -104,7 +110,7 @@ func (ph *protocolHandler) Serve(handler http.Handler, w http.ResponseWriter, r 
 				ph.deleteConnection(conn)
 				break
 			}
-			id, req := newHTTPRequest(baseURI, p, ph.codec)
+			id, req := newHTTPRequest(baseURI, clientID, p, ph.codec)
 			resp := newHTTPResponse(id, mt, conn, ph.codec)
 			handler.ServeHTTP(resp, req)
 		}
@@ -131,17 +137,16 @@ func (ph *protocolHandler) deleteConnection(conn *websocket.Conn) {
 	delete(ph.connections, conn)
 }
 
-func newHTTPRequest(baseURI string, data []byte, codec Codec) (string, *http.Request) {
+func newHTTPRequest(baseURI string, clientID string, data []byte, codec Codec) (string, *http.Request) {
 	headers, body, err := codec.DecodeSwaggerSocketMessage(data)
 	if err != nil {
 		//TODO return the error
 	}
 	uri := fmt.Sprintf("%s%s", baseURI, getHeader(headers, "path"))
 	req, _ := http.NewRequest(getHeader(headers, "method"), uri, bytes.NewReader(body))
+	rid := getHeader(headers, "id")
 	req.RequestURI = uri
-	//TODO for the id, we should transfer both the client specific id and the client identifier so that
-	// a multi-response sequence can survive reconnection and that multiple clients don't interfer each other.
-	copyHeaderToHTTPHeaders(headers, "id", req.Header, "X-Request-Id")
+	req.Header.Add(headerRequestKey, buildRequestKey(clientID, rid))
 	copyHeaderToHTTPHeaders(headers, "type", req.Header, "Content-Type")
 	copyHeaderToHTTPHeaders(headers, "accept", req.Header, "Accept")
 	if aheaders, ok := headers["headers"].(map[string]interface{}); ok {
@@ -149,7 +154,7 @@ func newHTTPRequest(baseURI string, data []byte, codec Codec) (string, *http.Req
 			req.Header.Add(aheader, avalue.(string))
 		}
 	}
-	return getHeader(headers, "id"), req
+	return rid, req
 }
 
 func newHTTPResponse(id string, messageType int, conn *websocket.Conn, codec Codec) http.ResponseWriter {
@@ -228,6 +233,10 @@ func getBaseURI(r *http.Request) string {
 	return baseURI
 }
 
+func getClientID(r *http.Request) string {
+	return r.URL.Query().Get("x-client-id")
+}
+
 // IsWebsocketUpgradeRequested checks if the request is an upgrade request (based on the jetty's websocket check)
 func IsWebsocketUpgradeRequested(r *http.Request) bool {
 	if "GET" != r.Method {
@@ -251,9 +260,20 @@ func IsWebsocketUpgradeRequested(r *http.Request) bool {
 
 // utilities
 
-// GetRequestID returns the swagger socket request id
-func GetRequestID(req *http.Request) string {
-	return req.Header.Get("X-Request-Id")
+// GetRequestKey returns the swagger socket request key
+func GetRequestKey(req *http.Request) string {
+	return req.Header.Get(headerRequestKey)
+}
+
+// GetDerivedRequestKey returns the swagger socket request key derived from the specified request key and the client-local request id
+func GetDerivedRequestKey(rkey string, rid string) string {
+	return strings.Split(rkey, "#")[0] + "#" + rid
+}
+
+// buildRequestKey returns the string consisting of client-id and request-id separaterd by a '#'
+// across multiple clients.
+func buildRequestKey(clientid string, reqid string) string {
+	return fmt.Sprintf("%s#%s", clientid, reqid)
 }
 
 // NewReusableResponder wraps the original responder to capture the underlining durable connection for later use

@@ -30,7 +30,7 @@ type UnsubscribeParams struct {
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 
-	/*subscription id
+	/*subscription id which corresponds to the id used to start a subscription
 	  Required: true
 	  In: path
 	*/

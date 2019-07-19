@@ -95,11 +95,11 @@ func TestNewHTTPRequest(t *testing.T) {
 			continue
 		}
 
-		id, req := newHTTPRequest("/test", []byte(tmsgstr), codec)
+		id, req := newHTTPRequest("/test", "default", []byte(tmsgstr), codec)
 		mmap := testMessageMaps[i]
 		assert.Equal(t, mmap["method"].(string), req.Method)
 		assert.True(t, strings.HasPrefix(req.RequestURI, "/test"))
 		assert.Equal(t, mmap["path"].(string), req.RequestURI[5:])
-		assert.Equal(t, id, GetRequestID(req))
+		assert.Equal(t, buildRequestKey("default", id), GetRequestKey(req))
 	}
 }

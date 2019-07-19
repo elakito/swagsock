@@ -62,7 +62,7 @@ for the unsubscribe operation typically these are written to a http.Request
 type UnsubscribeParams struct {
 
 	/*Sid
-	  subscription id
+	  subscription id which corresponds to the id used to start a subscription
 
 	*/
 	Sid string

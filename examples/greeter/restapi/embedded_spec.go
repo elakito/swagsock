@@ -228,7 +228,7 @@ func init() {
         ],
         "responses": {
           "200": {
-            "description": "Returns a subscription information",
+            "description": "Returns an empty or a sequence of greeting events",
             "schema": {
               "type": "array",
               "items": {
@@ -250,7 +250,7 @@ func init() {
         "parameters": [
           {
             "type": "string",
-            "description": "subscription id",
+            "description": "subscription id which corresponds to the id used to start a subscription",
             "name": "sid",
             "in": "path",
             "required": true
@@ -580,7 +580,7 @@ func init() {
         ],
         "responses": {
           "200": {
-            "description": "Returns a subscription information",
+            "description": "Returns an empty or a sequence of greeting events",
             "schema": {
               "type": "array",
               "items": {
@@ -602,7 +602,7 @@ func init() {
         "parameters": [
           {
             "type": "string",
-            "description": "subscription id",
+            "description": "subscription id which corresponds to the id used to start a subscription",
             "name": "sid",
             "in": "path",
             "required": true

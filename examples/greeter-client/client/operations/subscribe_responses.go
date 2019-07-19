@@ -44,7 +44,7 @@ func NewSubscribeOK() *SubscribeOK {
 
 /*SubscribeOK handles this case with default header values.
 
-Returns a subscription information
+Returns an empty or a sequence of greeting events
 */
 type SubscribeOK struct {
 	Payload []*models.GreetingReply

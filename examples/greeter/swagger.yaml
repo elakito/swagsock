@@ -147,7 +147,7 @@ paths:
           type: "string"
       responses:
         200:
-          description: "Returns a subscription information"
+          description: "Returns an empty or a sequence of greeting events"
           schema:
             type: "array"
             items:
@@ -162,7 +162,7 @@ paths:
       parameters:
       - name: "sid"
         in: "path"
-        description: "subscription id"
+        description: "subscription id which corresponds to the id used to start a subscription"
         required: true
         type: "string"
       responses:

@@ -16,7 +16,7 @@ import (
 // SubscribeOKCode is the HTTP code returned for type SubscribeOK
 const SubscribeOKCode int = 200
 
-/*SubscribeOK Returns a subscription information
+/*SubscribeOK Returns an empty or a sequence of greeting events
 
 swagger:response subscribeOK
 */
