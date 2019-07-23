@@ -50,8 +50,8 @@ $ node client.js
 
 .Console
 ----
-$ node client.js -c client1
-Client ID: client1
+$ node client.js
+Client ID: e1f9cd89-6eb5-4d6e-b799-e318bf6ce20c
 Host URL: http://localhost:8091/samples/greeter (No Authentication)
 Choose user ...
 user: elakito
@@ -77,8 +77,8 @@ elakito>
 ----
 
 ----
-$ node client.js -c client2
-Client ID: client2
+$ node client.js
+Client ID: e222aa65-21a9-49a2-ab68-0bdae8c277d7
 Host URL: http://localhost:8091/samples/greeter (No Authentication)
 Choose user ...
 user: estrella

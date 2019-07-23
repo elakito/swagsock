@@ -7,7 +7,6 @@
  * node client.js [options] [greeter-url]
  *
  * Options:
- *   -c    client id
  *   -u    user
  *   -p    password
  *   -k    use insecure mode in TLS
@@ -23,14 +22,15 @@
 "use strict";
 
 const HOST_URL = 'http://localhost:8091/samples/greeter';
-const CLIENT_ID = "unknown";
 
 var hosturl = HOST_URL;
 var authuser
 var authpassword
 var insecure;
-var clientid = CLIENT_ID;
 var trace = false;
+
+const uuidv4 = require('uuid/v4');
+var clientid = uuidv4();
 
 var arg;
 for (var i = 2; i < process.argv.length; i++) {
@@ -43,9 +43,6 @@ for (var i = 2; i < process.argv.length; i++) {
         arg = undefined;
     } else if (arg === "-k") {
         insecure = true;
-        arg = undefined;
-    } else if (arg === "-c") {
-        clientid = process.argv[++i];
         arg = undefined;
     } else if (arg === "-v") {
         trace = true;
@@ -313,7 +310,7 @@ var transport = null;
 var subSocket = null;
 
 function connect() {
-    subSocket = new WebSocket(hosturl + (hosturl.indexOf("?") > 0 ? "&" : "?") + "x-client-id=" + clientid, {
+    subSocket = new WebSocket(hosturl + (hosturl.indexOf("?") > 0 ? "&" : "?") + "x-tracking-id=" + clientid, {
         perMessageDeflate: false,
         rejectUnauthorized: !insecure,
         headers: headers,

@@ -7,7 +7,6 @@
  * node client.js [options] [greeter-url]
  *
  * Options:
- *   -c    client id
  *   -v    enable verbose mode
  *
  * Usage Samples:
@@ -18,20 +17,18 @@
 "use strict";
 
 const HOST_URL = 'http://localhost:8091/samples/greeter';
-const CLIENT_ID = "unknown";
 
 var trace = false;
 
-var clientid = CLIENT_ID;
 var hosturl = HOST_URL;
+
+const uuidv4 = require('uuid/v4');
+var clientid = uuidv4();
 
 var arg;
 for (var i = 2; i < process.argv.length; i++) {
     arg = process.argv[i];
-    if (arg === "-c") {
-        clientid = process.argv[++i];
-        arg = undefined;
-    } else if (arg === "-v") {
+    if (arg === "-v") {
         trace = true;
         arg = undefined;
     }
@@ -48,11 +45,12 @@ var prompt = reader.createInterface(process.stdin, process.stdout);
 
 var atmosphere = require('atmosphere.js');
 
-var request = { url: hosturl + (hosturl.indexOf("?") > 0 ? "&" : "?") + "x-client-id=" + clientid,
+var request = { url: hosturl,
                 transport : 'websocket',
                 enableProtocol: false,
                 trackMessageLength: false,
-                reconnectInterval : 5000};
+                reconnectInterval : 5000,
+                uuid: clientid};
 var isopen = false;
 
 // request/respons index

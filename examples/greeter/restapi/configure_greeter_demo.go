@@ -23,10 +23,11 @@ import (
 //go:generate swagger generate server --target .. --name greeter-demo --spec ../swagger.yaml
 
 var (
-	counter       int32
-	greeted       = make(map[string]int32)
-	statuslock    = &sync.RWMutex{}
-	subscriptions = make(map[string]*greetingSubscription)
+	counter          int32
+	greeted          = make(map[string]int32)
+	statuslock       = &sync.RWMutex{}
+	subscriptions    = make(map[string]*greetingSubscription)
+	subscriptionlock = &sync.RWMutex{}
 )
 
 type greetingSubscription struct {
@@ -99,11 +100,24 @@ func configureAPI(api *operations.GreeterDemoAPI) http.Handler {
 		updateGreet(params.Name)
 		payload := &models.GreetingReply{From: params.Name, Name: params.Body.Name, Text: params.Body.Text}
 		pb, _ := payload.MarshalBinary()
-		//TODO guard against concurrency and support reconnection-awareness
-		for _, subscription := range subscriptions {
+		//TODO do the writing and purging of the subscriptions asynchronously
+		var dead []string
+		subscriptionlock.RLock()
+		for subid, subscription := range subscriptions {
 			if params.Body.Name == "*" || subscription.name == params.Body.Name {
-				subscription.sub.Write(pb)
+				_, err := subscription.sub.Write(pb)
+				if err != nil {
+					dead = append(dead, subid)
+				}
 			}
+		}
+		subscriptionlock.RUnlock()
+		if len(dead) > 0 {
+			subscriptionlock.Lock()
+			for _, subid := range dead {
+				delete(subscriptions, subid)
+			}
+			subscriptionlock.Unlock()
 		}
 		return operations.NewGreetOK().WithPayload(payload)
 	})
@@ -121,13 +135,17 @@ func configureAPI(api *operations.GreeterDemoAPI) http.Handler {
 	api.SubscribeHandler = operations.SubscribeHandlerFunc(func(params operations.SubscribeParams) middleware.Responder {
 		responder := swagsock.NewReusableResponder(operations.NewSubscribeOK())
 		id := swagsock.GetRequestKey(params.HTTPRequest)
+		subscriptionlock.Lock()
 		subscriptions[id] = &greetingSubscription{name: params.Name, sub: responder}
+		subscriptionlock.Unlock()
 		return responder
 	})
 	api.UnsubscribeHandler = operations.UnsubscribeHandlerFunc(func(params operations.UnsubscribeParams) middleware.Responder {
 		id := swagsock.GetRequestKey(params.HTTPRequest)
 		unsubid := swagsock.GetDerivedRequestKey(id, params.Sid)
+		subscriptionlock.Lock()
 		delete(subscriptions, unsubid)
+		subscriptionlock.Unlock()
 		total, gnames := getGreetSummary()
 		return operations.NewGetGreetSummaryOK().WithPayload(&models.GreetingSummary{Greeted: gnames, Total: total})
 	})

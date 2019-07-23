@@ -17,8 +17,13 @@ import (
 )
 
 const (
-	// Revist the name of this internal header that represents the client-id and request-id pair
+	// Revisit the name of this internal header that represents the tracking-id and request-id pair
 	headerRequestKey = "X-Request-Key"
+)
+
+var (
+	// knownTrackingIDs lists the known tracking-id query parameters used in the websocket upgrade request
+	knownTrackingIDs = []string{"x-tracking-id", "X-Atmosphere-tracking-id"}
 )
 
 var websocketUpgrader = websocket.Upgrader{
@@ -100,7 +105,7 @@ func (ph *protocolHandler) Serve(handler http.Handler, w http.ResponseWriter, r 
 	}
 	ph.addConnetion(conn)
 	baseURI := getBaseURI(r)
-	clientID := getClientID(r)
+	trackingID := getTrackingID(r)
 
 	go func() {
 		for {
@@ -110,7 +115,7 @@ func (ph *protocolHandler) Serve(handler http.Handler, w http.ResponseWriter, r 
 				ph.deleteConnection(conn)
 				break
 			}
-			id, req := newHTTPRequest(baseURI, clientID, p, ph.codec)
+			id, req := newHTTPRequest(baseURI, trackingID, p, ph.codec)
 			resp := newHTTPResponse(id, mt, conn, ph.codec)
 			handler.ServeHTTP(resp, req)
 		}
@@ -137,7 +142,7 @@ func (ph *protocolHandler) deleteConnection(conn *websocket.Conn) {
 	delete(ph.connections, conn)
 }
 
-func newHTTPRequest(baseURI string, clientID string, data []byte, codec Codec) (string, *http.Request) {
+func newHTTPRequest(baseURI string, trackingID string, data []byte, codec Codec) (string, *http.Request) {
 	headers, body, err := codec.DecodeSwaggerSocketMessage(data)
 	if err != nil {
 		//TODO return the error
@@ -146,7 +151,7 @@ func newHTTPRequest(baseURI string, clientID string, data []byte, codec Codec) (
 	req, _ := http.NewRequest(getHeader(headers, "method"), uri, bytes.NewReader(body))
 	rid := getHeader(headers, "id")
 	req.RequestURI = uri
-	req.Header.Add(headerRequestKey, buildRequestKey(clientID, rid))
+	req.Header.Add(headerRequestKey, buildRequestKey(trackingID, rid))
 	copyHeaderToHTTPHeaders(headers, "type", req.Header, "Content-Type")
 	copyHeaderToHTTPHeaders(headers, "accept", req.Header, "Accept")
 	if aheaders, ok := headers["headers"].(map[string]interface{}); ok {
@@ -233,8 +238,14 @@ func getBaseURI(r *http.Request) string {
 	return baseURI
 }
 
-func getClientID(r *http.Request) string {
-	return r.URL.Query().Get("x-client-id")
+func getTrackingID(r *http.Request) string {
+	query := r.URL.Query()
+	for _, tname := range knownTrackingIDs {
+		if tid := query.Get(tname); tid != "" {
+			return tid
+		}
+	}
+	return ""
 }
 
 // IsWebsocketUpgradeRequested checks if the request is an upgrade request (based on the jetty's websocket check)
@@ -270,8 +281,7 @@ func GetDerivedRequestKey(rkey string, rid string) string {
 	return strings.Split(rkey, "#")[0] + "#" + rid
 }
 
-// buildRequestKey returns the string consisting of client-id and request-id separaterd by a '#'
-// across multiple clients.
+// buildRequestKey returns the string consisting of tracking-id and request-id separaterd by '#'
 func buildRequestKey(clientid string, reqid string) string {
 	return fmt.Sprintf("%s#%s", clientid, reqid)
 }
