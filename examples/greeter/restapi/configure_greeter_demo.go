@@ -5,7 +5,9 @@ package restapi
 import (
 	"crypto/tls"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 	"sync"
 	"sync/atomic"
 
@@ -26,14 +28,8 @@ var (
 	counter          int32
 	greeted          = make(map[string]int32)
 	statuslock       = &sync.RWMutex{}
-	subscriptions    = make(map[string]*greetingSubscription)
-	subscriptionlock = &sync.RWMutex{}
+	responseMediator swagsock.ResponseMediator
 )
-
-type greetingSubscription struct {
-	name string
-	sub  *swagsock.ReusableResponder
-}
 
 func getGreetSummary() (int32, []string) {
 	var total int32
@@ -100,25 +96,7 @@ func configureAPI(api *operations.GreeterDemoAPI) http.Handler {
 		updateGreet(params.Name)
 		payload := &models.GreetingReply{From: params.Name, Name: params.Body.Name, Text: params.Body.Text}
 		pb, _ := payload.MarshalBinary()
-		//TODO do the writing and purging of the subscriptions asynchronously
-		var dead []string
-		subscriptionlock.RLock()
-		for subid, subscription := range subscriptions {
-			if params.Body.Name == "*" || subscription.name == params.Body.Name {
-				_, err := subscription.sub.Write(pb)
-				if err != nil {
-					dead = append(dead, subid)
-				}
-			}
-		}
-		subscriptionlock.RUnlock()
-		if len(dead) > 0 {
-			subscriptionlock.Lock()
-			for _, subid := range dead {
-				delete(subscriptions, subid)
-			}
-			subscriptionlock.Unlock()
-		}
+		responseMediator.Write(params.Body.Name, pb)
 		return operations.NewGreetOK().WithPayload(payload)
 	})
 	api.PingHandler = operations.PingHandlerFunc(func(params operations.PingParams) middleware.Responder {
@@ -133,19 +111,11 @@ func configureAPI(api *operations.GreeterDemoAPI) http.Handler {
 		return operations.NewUploadOK().WithPayload(&models.UploadStatus{Name: params.Name, Size: int32(size)})
 	})
 	api.SubscribeHandler = operations.SubscribeHandlerFunc(func(params operations.SubscribeParams) middleware.Responder {
-		responder := swagsock.NewReusableResponder(operations.NewSubscribeOK())
-		id := swagsock.GetRequestKey(params.HTTPRequest)
-		subscriptionlock.Lock()
-		subscriptions[id] = &greetingSubscription{name: params.Name, sub: responder}
-		subscriptionlock.Unlock()
+		responder := responseMediator.Subscribe(swagsock.GetRequestKey(params.HTTPRequest), params.Name, operations.NewSubscribeOK(), nil)
 		return responder
 	})
 	api.UnsubscribeHandler = operations.UnsubscribeHandlerFunc(func(params operations.UnsubscribeParams) middleware.Responder {
-		id := swagsock.GetRequestKey(params.HTTPRequest)
-		unsubid := swagsock.GetDerivedRequestKey(id, params.Sid)
-		subscriptionlock.Lock()
-		delete(subscriptions, unsubid)
-		subscriptionlock.Unlock()
+		responseMediator.Unsubscribe(swagsock.GetRequestKey(params.HTTPRequest), params.Sid)
 		total, gnames := getGreetSummary()
 		return operations.NewGetGreetSummaryOK().WithPayload(&models.GreetingSummary{Greeted: gnames, Total: total})
 	})
@@ -183,7 +153,11 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 func globalMiddleware(handler http.Handler) http.Handler {
 
 	// instantiate the protocol handler
-	protocolHandler := swagsock.CreateProtocolHandler(nil)
+	conf := swagsock.NewConfig()
+	conf.Log = log.New(os.Stdout, "[swagsocket] ", log.LstdFlags)
+	responseMediator = conf.ResponseMediator
+
+	protocolHandler := swagsock.CreateProtocolHandler(conf)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// use the protocol handler to handle websocket requests

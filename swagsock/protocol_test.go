@@ -1,9 +1,12 @@
 package swagsock
 
 import (
+	"bytes"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/go-openapi/runtime"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -102,4 +105,63 @@ func TestNewHTTPRequest(t *testing.T) {
 		assert.Equal(t, mmap["path"].(string), req.RequestURI[5:])
 		assert.Equal(t, buildRequestKey("default", id), GetRequestKey(req))
 	}
+}
+
+func TestDefaultResponseMediator(t *testing.T) {
+	mediator := NewDefaultResponseMediator().(*defaultResponseMediator)
+	r1 := &testOK{}
+	w1 := &testWriter{}
+	rr1 := mediator.Subscribe("foo#0", "naranja", r1, nil)
+	rr1.WriteResponse(w1, nil)
+
+	r2 := &testOK{}
+	w2 := &testWriter{}
+	rr2 := mediator.Subscribe("bar#2", "manzana", r2, []byte("adios"))
+	rr2.WriteResponse(w2, nil)
+
+	r3 := &testOK{}
+	w3 := &testWriter{}
+	rr3 := mediator.Subscribe("bar#5", "orange", r3, nil)
+	rr3.WriteResponse(w3, nil)
+
+	mediator.Write("naranja", []byte("hola"))
+	mediator.Write("orange", []byte("hallo"))
+	mediator.Write("*", []byte("#swagger"))
+
+	assert.Equal(t, "hola#swagger", w1.buf.String())
+	assert.Equal(t, "#swagger", w2.buf.String())
+	assert.Equal(t, "hallo#swagger", w3.buf.String())
+	assert.Equal(t, 3, len(mediator.responders))
+
+	mediator.Unsubscribe("bar#10", "2")
+	mediator.Write("manzana", []byte("bien"))
+	mediator.Write("*", []byte("hello"))
+
+	assert.Equal(t, "hola#swaggeradioshello", w1.buf.String())
+	assert.Equal(t, "#swagger", w2.buf.String())
+	assert.Equal(t, "hallo#swaggeradioshello", w3.buf.String())
+	assert.Equal(t, 2, len(mediator.responders))
+
+	mediator.UnsubscribeAll("foo")
+	mediator.UnsubscribeAll("bar")
+	assert.Equal(t, 0, len(mediator.responders))
+}
+
+type testOK struct {
+}
+
+func (o *testOK) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
+}
+
+type testWriter struct {
+	buf bytes.Buffer
+}
+
+func (w *testWriter) Header() http.Header {
+	return nil
+}
+func (w *testWriter) Write(b []byte) (int, error) {
+	return w.buf.Write(b)
+}
+func (w *testWriter) WriteHeader(statusCode int) {
 }

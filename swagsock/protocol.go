@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -14,16 +15,18 @@ import (
 	"github.com/go-openapi/runtime/middleware"
 
 	"github.com/gorilla/websocket"
+	"github.com/satori/go.uuid"
 )
 
 const (
-	// Revisit the name of this internal header that represents the tracking-id and request-id pair
+	// Revisit the Name of this internal header that represents the tracking-id and request-id pair
 	headerRequestKey = "X-Request-Key"
 )
 
 var (
 	// knownTrackingIDs lists the known tracking-id query parameters used in the websocket upgrade request
 	knownTrackingIDs = []string{"x-tracking-id", "X-Atmosphere-tracking-id"}
+	defaultLogger    = log.New(ioutil.Discard, "[swagsocket] ", log.LstdFlags)
 )
 
 var websocketUpgrader = websocket.Upgrader{
@@ -73,23 +76,25 @@ func (c *defaultCodec) EncodeSwaggerSocketMessage(headers map[string]interface{}
 	return buf.Bytes(), nil
 }
 
-func copyValue(src map[string]interface{}, target map[string]interface{}, key string) {
-	if v, ok := src[key]; ok {
-		target[key] = v
-	}
+// NewConfig returns a default Config object
+func NewConfig() *Config {
+	conf := &Config{}
+	conf.Codec = NewDefaultCodec()
+	conf.ResponseMediator = NewDefaultResponseMediator()
+	conf.Log = defaultLogger
+	return conf
 }
 
 // CreateProtocolHandler creates a new ProtocolHandler with the specified codec. If codec is nil, the defaultCodec is used
-func CreateProtocolHandler(codec Codec) ProtocolHandler {
-	if codec == nil {
-		codec = NewDefaultCodec()
-	}
-	return &protocolHandler{codec: codec, connections: make(map[*websocket.Conn]struct{})}
+func CreateProtocolHandler(conf *Config) ProtocolHandler {
+	return &protocolHandler{codec: conf.Codec, mediator: conf.ResponseMediator, log: conf.Log, connections: make(map[*websocket.Conn]string)}
 }
 
 type protocolHandler struct {
 	codec       Codec
-	connections map[*websocket.Conn]struct{}
+	connections map[*websocket.Conn]string
+	mediator    ResponseMediator
+	log         Logger
 	sync.RWMutex
 }
 
@@ -103,20 +108,32 @@ func (ph *protocolHandler) Serve(handler http.Handler, w http.ResponseWriter, r 
 		http.Error(w, fmt.Sprintf("Failed to upgrade: %v", err), http.StatusInternalServerError)
 		return
 	}
-	ph.addConnetion(conn)
+	conn.SetCloseHandler(func(code int, text string) error {
+		conn.Close()
+		trackingID := ph.deleteConnection(conn)
+		ph.log.Printf("disconnected code=%d, trackingID=%s", code, trackingID)
+		ph.mediator.UnsubscribeAll(trackingID)
+		return nil
+	})
+	connlock := &sync.Mutex{}
 	baseURI := getBaseURI(r)
 	trackingID := getTrackingID(r)
+	if trackingID == "" {
+		trackingID = uuid.NewV4().String()
+	}
+	ph.addConnetion(conn, trackingID)
+
+	ph.log.Printf("connected at baseURI=%s, trackingID=%s", baseURI, trackingID)
 
 	go func() {
 		for {
 			mt, p, err := conn.ReadMessage()
 			if err != nil {
 				conn.Close()
-				ph.deleteConnection(conn)
 				break
 			}
 			id, req := newHTTPRequest(baseURI, trackingID, p, ph.codec)
-			resp := newHTTPResponse(id, mt, conn, ph.codec)
+			resp := newHTTPResponse(id, mt, conn, connlock, ph.codec)
 			handler.ServeHTTP(resp, req)
 		}
 	}()
@@ -130,16 +147,83 @@ func (ph *protocolHandler) Destroy() {
 	}
 }
 
-func (ph *protocolHandler) addConnetion(conn *websocket.Conn) {
+func (ph *protocolHandler) addConnetion(conn *websocket.Conn, trackingID string) {
 	ph.Lock()
 	defer ph.Unlock()
-	ph.connections[conn] = struct{}{}
+	ph.connections[conn] = trackingID
 }
 
-func (ph *protocolHandler) deleteConnection(conn *websocket.Conn) {
+func (ph *protocolHandler) deleteConnection(conn *websocket.Conn) string {
 	ph.Lock()
 	defer ph.Unlock()
+	trackingID := ph.connections[conn]
 	delete(ph.connections, conn)
+	return trackingID
+}
+
+type defaultResponseMediator struct {
+	responders map[string]*ReusableResponder
+	sync.RWMutex
+}
+
+// NewDefaultResponseMediator returns a new default ResponseMediator
+func NewDefaultResponseMediator() ResponseMediator {
+	return &defaultResponseMediator{responders: make(map[string]*ReusableResponder)}
+}
+
+func (m *defaultResponseMediator) Subscribe(key string, name string, responder middleware.Responder, bye []byte) middleware.Responder {
+	rr := NewReusableResponder(name, responder, bye)
+	m.Lock()
+	defer m.Unlock()
+	m.responders[key] = rr
+	return rr
+}
+
+func (m *defaultResponseMediator) Unsubscribe(key string, subid string) {
+	unsubid := getDerivedRequestKey(key, subid)
+	m.Lock()
+	defer m.Unlock()
+	if r := m.responders[unsubid]; r != nil {
+		delete(m.responders, unsubid)
+		if r.bye != nil {
+			m.write("*", r.bye)
+		}
+	}
+}
+
+func (m *defaultResponseMediator) UnsubscribeAll(trackingID string) {
+	m.Lock()
+	defer m.Unlock()
+	var byebye [][]byte
+	for key := range m.responders {
+		if strings.HasPrefix(key, trackingID) {
+			if r := m.responders[key]; r != nil {
+				delete(m.responders, key)
+				if r.bye != nil {
+					byebye = append(byebye, r.bye)
+				}
+			}
+		}
+	}
+	for _, bye := range byebye {
+		m.write("*", bye)
+	}
+}
+
+func (m *defaultResponseMediator) Write(name string, data []byte) error {
+	m.RLock()
+	defer m.RUnlock()
+	m.write(name, data)
+	return nil
+}
+func (m *defaultResponseMediator) write(name string, data []byte) {
+	for _, r := range m.responders {
+		if r.Match(name) {
+			if _, err := r.Write(data); err != nil {
+				// log error
+			}
+		}
+	}
 }
 
 func newHTTPRequest(baseURI string, trackingID string, data []byte, codec Codec) (string, *http.Request) {
@@ -162,8 +246,8 @@ func newHTTPRequest(baseURI string, trackingID string, data []byte, codec Codec)
 	return rid, req
 }
 
-func newHTTPResponse(id string, messageType int, conn *websocket.Conn, codec Codec) http.ResponseWriter {
-	resp := &response{id: id, messageType: messageType, headers: make(http.Header), conn: conn, codec: codec}
+func newHTTPResponse(id string, messageType int, conn *websocket.Conn, connlock *sync.Mutex, codec Codec) http.ResponseWriter {
+	resp := &response{id: id, messageType: messageType, headers: make(http.Header), conn: conn, connlock: connlock, codec: codec}
 	return resp
 }
 
@@ -174,6 +258,7 @@ type response struct {
 	conn        *websocket.Conn
 	messageType int
 	codec       Codec
+	connlock    *sync.Mutex
 }
 
 func (r *response) Header() http.Header {
@@ -183,7 +268,9 @@ func (r *response) Header() http.Header {
 func (r *response) Write(body []byte) (int, error) {
 	// flush the buffer when the content-type header is not set
 	data, _ := r.codec.EncodeSwaggerSocketMessage(r.buildHeaders(), body)
+	r.connlock.Lock()
 	r.conn.WriteMessage(r.messageType, data)
+	r.connlock.Unlock()
 	return len(body), nil
 }
 
@@ -271,33 +358,35 @@ func IsWebsocketUpgradeRequested(r *http.Request) bool {
 
 // utilities
 
-// GetRequestKey returns the swagger socket request key
+// GetRequestKey returns the swagger socket request name
 func GetRequestKey(req *http.Request) string {
 	return req.Header.Get(headerRequestKey)
 }
 
-// GetDerivedRequestKey returns the swagger socket request key derived from the specified request key and the client-local request id
-func GetDerivedRequestKey(rkey string, rid string) string {
+// getDerivedRequestKey returns the swagger socket request name derived from the specified request name and the client-local request id
+func getDerivedRequestKey(rkey string, rid string) string {
 	return strings.Split(rkey, "#")[0] + "#" + rid
 }
 
 // buildRequestKey returns the string consisting of tracking-id and request-id separaterd by '#'
-func buildRequestKey(clientid string, reqid string) string {
-	return fmt.Sprintf("%s#%s", clientid, reqid)
+func buildRequestKey(trackingid string, reqid string) string {
+	return fmt.Sprintf("%s#%s", trackingid, reqid)
 }
 
 // NewReusableResponder wraps the original responder to capture the underlining durable connection for later use
-func NewReusableResponder(r middleware.Responder) *ReusableResponder {
-	return &ReusableResponder{responder: r}
+func NewReusableResponder(key string, r middleware.Responder, bye []byte) *ReusableResponder {
+	return &ReusableResponder{name: key, responder: r, bye: bye}
 }
 
 // ReusableResponder is a middleware.Responder which grab the http.ResponseWriter for later reuse
 type ReusableResponder struct {
+	name      string
 	responder middleware.Responder
+	bye       []byte
 	writer    http.ResponseWriter
 }
 
-// WriteResponse writes to the response
+// WriteResponse writes the initial response to the response writer
 func (r *ReusableResponder) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
 	if r.writer == nil {
 		r.writer = rw
@@ -305,6 +394,12 @@ func (r *ReusableResponder) WriteResponse(rw http.ResponseWriter, producer runti
 	r.responder.WriteResponse(rw, producer)
 }
 
+// Write writes the subsequent response to the response writer
 func (r *ReusableResponder) Write(b []byte) (int, error) {
 	return r.writer.Write(b)
+}
+
+// Match returns true if the specified name matches this responder
+func (r *ReusableResponder) Match(name string) bool {
+	return name == "*" || name == r.name
 }

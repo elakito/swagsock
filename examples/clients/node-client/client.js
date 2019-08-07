@@ -268,6 +268,11 @@ function doSubscribe(v) {
 }
 
 function doUnsubscribe(v) {
+    if (!v) {
+        errorUsage("unsubscribe");
+        return;
+    }
+
     var req = JSON.stringify({ "id": getNextId(), "method": "DELETE", "path": "/v1/unsubscribe/" + v[0]});
 
     if (trace) {

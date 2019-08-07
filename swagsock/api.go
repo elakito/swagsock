@@ -2,6 +2,8 @@ package swagsock
 
 import (
 	"net/http"
+
+	"github.com/go-openapi/runtime/middleware"
 )
 
 // Codec is the interface that wraps the decode and encode methods.
@@ -20,4 +22,26 @@ type ProtocolHandler interface {
 	Serve(handler http.Handler, w http.ResponseWriter, r *http.Request)
 	// Destroy the handler
 	Destroy()
+}
+
+// ResponseMediator is the interface to manage responders and delivery of responses to the subscribers
+type ResponseMediator interface {
+	Subscribe(key string, name string, responder middleware.Responder, bye []byte) middleware.Responder
+	Unsubscribe(key string, subid string)
+	UnsubscribeAll(key string)
+	Write(name string, data []byte) error
+}
+
+// Logger is the interface for logging
+type Logger interface {
+	Print(...interface{})
+	Printf(string, ...interface{})
+	Println(...interface{})
+}
+
+// Config is the configuration object
+type Config struct {
+	Codec            Codec
+	ResponseMediator ResponseMediator
+	Log              Logger
 }
