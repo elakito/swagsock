@@ -111,25 +111,25 @@ func TestDefaultResponseMediator(t *testing.T) {
 	mediator := NewDefaultResponseMediator().(*defaultResponseMediator)
 	r1 := &testOK{}
 	w1 := &testWriter{}
-	rr1 := mediator.Subscribe("foo#0", "naranja", r1, nil)
+	rr1 := mediator.Subscribe("foo#0", "naranja", r1, nil, nil)
 	rr1.WriteResponse(w1, nil)
 
 	r2 := &testOK{}
 	w2 := &testWriter{}
-	rr2 := mediator.Subscribe("bar#2", "manzana", r2, []byte("adios"))
+	rr2 := mediator.Subscribe("bar#2", "manzana", r2, []byte("hi"), []byte("adios"))
 	rr2.WriteResponse(w2, nil)
 
 	r3 := &testOK{}
 	w3 := &testWriter{}
-	rr3 := mediator.Subscribe("bar#5", "orange", r3, nil)
+	rr3 := mediator.Subscribe("bar#5", "orange", r3, nil, nil)
 	rr3.WriteResponse(w3, nil)
 
 	mediator.Write("naranja", []byte("hola"))
 	mediator.Write("orange", []byte("hallo"))
 	mediator.Write("*", []byte("#swagger"))
 
-	assert.Equal(t, "hola#swagger", w1.buf.String())
-	assert.Equal(t, "#swagger", w2.buf.String())
+	assert.Equal(t, "hihola#swagger", w1.buf.String())
+	assert.Equal(t, "hi#swagger", w2.buf.String())
 	assert.Equal(t, "hallo#swagger", w3.buf.String())
 	assert.Equal(t, 3, len(mediator.responders))
 
@@ -137,8 +137,8 @@ func TestDefaultResponseMediator(t *testing.T) {
 	mediator.Write("manzana", []byte("bien"))
 	mediator.Write("*", []byte("hello"))
 
-	assert.Equal(t, "hola#swaggeradioshello", w1.buf.String())
-	assert.Equal(t, "#swagger", w2.buf.String())
+	assert.Equal(t, "hihola#swaggeradioshello", w1.buf.String())
+	assert.Equal(t, "hi#swagger", w2.buf.String())
 	assert.Equal(t, "hallo#swaggeradioshello", w3.buf.String())
 	assert.Equal(t, 2, len(mediator.responders))
 

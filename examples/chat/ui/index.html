@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+  <title>Swaggersocket Chat</title>
+  <!-- the idea about this comes from github.com/Atmosphere/atmosphere-samples/samples/chat -->
+  <script type="text/javascript" src="lib/jquery-2.2.4.min.js"></script>
+  <script type="text/javascript" src="lib/application.js"></script>
+  <style>
+    * {font-family: tahoma; font-size: 12px; padding: 0px; margin: 0px;}
+    p {line-height: 18px;}
+    div {width: 600px; margin-left: auto; margin-right: auto;}
+    #content {padding: 5px; background: #ddd; border-radius: 5px; border: 1px solid #ccc; margin-top: 10px;}
+    #header {padding: 5px; background: #d5f6ff; border-radius: 5px; border: 1px solid L=#ccc; margin-top: 10px;}
+    #input {border-radius: 2px; border: 1px solid #ccc; margin-top: 10px; padding: 5px; width: 500px;}
+    #status {width: 88px; display: block; float: left; margin-top: 15px;}
+  </style>
+</head>
+<body>
+    <div id="header"><h3>Chat over go-openapi rest server with swaggersocket protocol handler</h3></div>
+    <div id="content"></div>
+    <div>
+        <span id="status">Connecting...</span>
+        <input type="text" id="input" disabled="disabled"/>
+    </div>
+</body>

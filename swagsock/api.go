@@ -26,7 +26,7 @@ type ProtocolHandler interface {
 
 // ResponseMediator is the interface to manage responders and delivery of responses to the subscribers
 type ResponseMediator interface {
-	Subscribe(key string, name string, responder middleware.Responder, bye []byte) middleware.Responder
+	Subscribe(key string, name string, responder middleware.Responder, hello []byte, bye []byte) middleware.Responder
 	Unsubscribe(key string, subid string)
 	UnsubscribeAll(key string)
 	Write(name string, data []byte) error

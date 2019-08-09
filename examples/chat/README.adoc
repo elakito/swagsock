@@ -1,0 +1,33 @@
+==== chat server and client
+
+This chat server is a REST server that uses Swaggersocket to provide a chat service.
+
+The server side code has been generated from the included https://raw.githubusercontent.com/elakito/swagsock/master/examples/chat/swagger.json[swagger.json] using go swagger (version 0.19.0) by command
+----
+$ swagger generate server -f swagger.json -A chat-demo
+----
+
+The chat service provides the following operations.
+
+
+subscribe   -  subscribe to the chat channel
+unsubscribe -  unsubscribe from the chat channel
+chat        -  chat with everyone on the chat channel
+
+These operations take advantage of Websocket and the chat clients can send and receive messages asynchronously over Websocket.
+
+
+===== Run
+To start this server at http port 8091
+----
+$ go run cmd/chat-demo-server/main.go --scheme http --port 8091
+----
+
+.Console
+----
+$ go run cmd/chat-demo-server/main.go --scheme http --port 8091
+2018/04/07 09:26:47 Serving greeter demo at http://127.0.0.1:8091
+----
+
+and open the page http://localhost:8091/ui/ to use the chat client.
+

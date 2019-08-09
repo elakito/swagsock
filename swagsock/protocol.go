@@ -171,8 +171,8 @@ func NewDefaultResponseMediator() ResponseMediator {
 	return &defaultResponseMediator{responders: make(map[string]*ReusableResponder)}
 }
 
-func (m *defaultResponseMediator) Subscribe(key string, name string, responder middleware.Responder, bye []byte) middleware.Responder {
-	rr := NewReusableResponder(name, responder, bye)
+func (m *defaultResponseMediator) Subscribe(key string, name string, responder middleware.Responder, hello []byte, bye []byte) middleware.Responder {
+	rr := NewReusableResponder(name, responder, m, hello, bye)
 	m.Lock()
 	defer m.Unlock()
 	m.responders[key] = rr
@@ -374,16 +374,18 @@ func buildRequestKey(trackingid string, reqid string) string {
 }
 
 // NewReusableResponder wraps the original responder to capture the underlining durable connection for later use
-func NewReusableResponder(key string, r middleware.Responder, bye []byte) *ReusableResponder {
-	return &ReusableResponder{name: key, responder: r, bye: bye}
+func NewReusableResponder(key string, r middleware.Responder, mediator ResponseMediator, hello []byte, bye []byte) *ReusableResponder {
+	return &ReusableResponder{name: key, responder: r, mediator: mediator, hello: hello, bye: bye}
 }
 
 // ReusableResponder is a middleware.Responder which grab the http.ResponseWriter for later reuse
 type ReusableResponder struct {
 	name      string
 	responder middleware.Responder
+	hello     []byte
 	bye       []byte
 	writer    http.ResponseWriter
+	mediator  ResponseMediator
 }
 
 // WriteResponse writes the initial response to the response writer
@@ -392,6 +394,9 @@ func (r *ReusableResponder) WriteResponse(rw http.ResponseWriter, producer runti
 		r.writer = rw
 	}
 	r.responder.WriteResponse(rw, producer)
+	if r.hello != nil {
+		r.mediator.Write("*", r.hello)
+	}
 }
 
 // Write writes the subsequent response to the response writer

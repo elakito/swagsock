@@ -1,0 +1,163 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "This is a swaggersocket chat demo.",
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "termsOfService": "http://www.sap.com/vora/terms/",
+        "title": "swaggersocket chat demo API",
+        "version": "1.0.0"
+    },
+    "basePath": "/samples/chat",
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "paths": {
+        "/v1/chat/{name}": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "description": "Chat with someone",
+                "operationId": "chat",
+                "parameters": [
+                    {
+                        "description": "author's name",
+                        "in": "path",
+                        "name": "name",
+                        "required": true,
+                        "type": "string"
+                    },
+                    {
+                        "description": "A chat message",
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "properties": {
+                                "text": {
+                                    "description": "chat message",
+                                    "type": "string"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "A chat acknowledgement",
+                        "schema": {
+                            "$ref": "#/definitions/message"
+                        }
+                    }
+                },
+                "summary": "chat with someone"
+            }
+        },
+        "/v1/subscribe/{name}": {
+            "get": {
+                "description": "Subscribe to the chat events",
+                "operationId": "subscribe",
+                "parameters": [
+                    {
+                        "description": "author's name",
+                        "in": "path",
+                        "name": "name",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Subscription information",
+                        "schema": {
+                            "items": {
+                                "$ref": "#/definitions/message"
+                            },
+                            "type": "array"
+                        }
+                    }
+                },
+                "summary": "Subscribe to the chat events"
+            }
+        },
+        "/v1/unsubscribe/{sid}": {
+            "delete": {
+                "description": "Unsubscribe from the chat events",
+                "operationId": "unsubscribe",
+                "parameters": [
+                    {
+                        "description": "subscription id",
+                        "in": "path",
+                        "name": "sid",
+                        "required": true,
+                        "type": "string"
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Chat summary",
+                        "schema": {
+                            "$ref": "#/definitions/summary"
+                        }
+                    }
+                },
+                "summary": "Unsubscribe from the chat events"
+            }
+        }
+    },
+    "definitions": {
+        "message": {
+            "properties": {
+                "name": {
+                    "description": "chat author",
+                    "type": "string"
+                },
+                "text": {
+                    "description": "message text",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "message type",
+                    "enum": [
+                        "message",
+                        "joined",
+                        "left"
+                    ],
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "summary": {
+            "properties": {
+                "authors": {
+                    "description": "chatted persons",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "total": {
+                    "description": "total chat message count",
+                    "format": "int32",
+                    "type": "integer"
+                }
+            },
+            "type": "object"
+        }
+    }
+}
