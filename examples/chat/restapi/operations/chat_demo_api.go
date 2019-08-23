@@ -40,6 +40,9 @@ func NewChatDemoAPI(spec *loads.Document) *ChatDemoAPI {
 		ChatHandler: ChatHandlerFunc(func(params ChatParams) middleware.Responder {
 			return middleware.NotImplemented("operation Chat has not yet been implemented")
 		}),
+		MembersHandler: MembersHandlerFunc(func(params MembersParams) middleware.Responder {
+			return middleware.NotImplemented("operation Members has not yet been implemented")
+		}),
 		SubscribeHandler: SubscribeHandlerFunc(func(params SubscribeParams) middleware.Responder {
 			return middleware.NotImplemented("operation Subscribe has not yet been implemented")
 		}),
@@ -79,6 +82,8 @@ type ChatDemoAPI struct {
 
 	// ChatHandler sets the operation handler for the chat operation
 	ChatHandler ChatHandler
+	// MembersHandler sets the operation handler for the members operation
+	MembersHandler MembersHandler
 	// SubscribeHandler sets the operation handler for the subscribe operation
 	SubscribeHandler SubscribeHandler
 	// UnsubscribeHandler sets the operation handler for the unsubscribe operation
@@ -148,6 +153,10 @@ func (o *ChatDemoAPI) Validate() error {
 
 	if o.ChatHandler == nil {
 		unregistered = append(unregistered, "ChatHandler")
+	}
+
+	if o.MembersHandler == nil {
+		unregistered = append(unregistered, "MembersHandler")
 	}
 
 	if o.SubscribeHandler == nil {
@@ -260,6 +269,11 @@ func (o *ChatDemoAPI) initHandlerCache() {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}
 	o.handlers["POST"]["/v1/chat/{name}"] = NewChat(o.context, o.ChatHandler)
+
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/v1/members"] = NewMembers(o.context, o.MembersHandler)
 
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)

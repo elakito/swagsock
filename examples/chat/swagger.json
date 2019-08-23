@@ -117,6 +117,28 @@
                 },
                 "summary": "Unsubscribe from the chat events"
             }
+        },
+        "/v1/members": {
+            "get": {
+                "description": "Get the list of chat memebers",
+                "operationId": "members",
+                "parameters": [],
+                "produces": [
+                    "application/json"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Memebers list",
+                        "schema": {
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        }
+                    }
+                },
+                "summary": "Get the list of chat members"
+            }
         }
     },
     "definitions": {

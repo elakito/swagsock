@@ -210,6 +210,20 @@ func (m *defaultResponseMediator) UnsubscribeAll(trackingID string) {
 	}
 }
 
+func (m *defaultResponseMediator) Subscribed() []string {
+	subs := make([]string, 0)
+	seen := make(map[string]struct{})
+	m.RLock()
+	defer m.RUnlock()
+	for _, r := range m.responders {
+		if _, ok := seen[r.name]; !ok {
+			seen[r.name] = struct{}{}
+			subs = append(subs, r.name)
+		}
+	}
+	return subs
+}
+
 func (m *defaultResponseMediator) Write(name string, data []byte) error {
 	m.RLock()
 	defer m.RUnlock()

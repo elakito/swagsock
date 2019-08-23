@@ -29,6 +29,7 @@ type ResponseMediator interface {
 	Subscribe(key string, name string, responder middleware.Responder, hello []byte, bye []byte) middleware.Responder
 	Unsubscribe(key string, subid string)
 	UnsubscribeAll(key string)
+	Subscribed() []string
 	Write(name string, data []byte) error
 }
 

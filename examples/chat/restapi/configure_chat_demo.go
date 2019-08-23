@@ -22,17 +22,17 @@ import (
 //go:generate swagger generate server --target ../../chat --name ChatDemo --spec ../swagger.json
 
 var (
-	users            = make(map[string]int32)
+	usersstat        = make(map[string]int32)
 	statuslock       = &sync.RWMutex{}
 	responseMediator swagsock.ResponseMediator
 )
 
 func getChatSummary() (int32, []string) {
 	var total int32
-	names := make([]string, 0, len(users))
+	names := make([]string, 0, len(usersstat))
 	statuslock.RLock()
 	defer statuslock.RUnlock()
-	for name, count := range users {
+	for name, count := range usersstat {
 		names = append(names, name)
 		total += count
 	}
@@ -41,7 +41,7 @@ func getChatSummary() (int32, []string) {
 func updateChatSummary(name string) {
 	statuslock.Lock()
 	defer statuslock.Unlock()
-	users[name]++
+	usersstat[name]++
 }
 func configureFlags(api *operations.ChatDemoAPI) {
 	// api.CommandLineOptionsGroups = []swag.CommandLineOptionsGroup{ ... }
@@ -70,6 +70,9 @@ func configureAPI(api *operations.ChatDemoAPI) http.Handler {
 		pb, _ := payload.MarshalBinary()
 		responseMediator.Write("*", pb)
 		return operations.NewChatOK().WithPayload(payload)
+	})
+	api.MembersHandler = operations.MembersHandlerFunc(func(params operations.MembersParams) middleware.Responder {
+		return operations.NewMembersOK().WithPayload(responseMediator.Subscribed())
 	})
 	api.SubscribeHandler = operations.SubscribeHandlerFunc(func(params operations.SubscribeParams) middleware.Responder {
 		hello := &models.Message{Name: params.Name, Type: "joined"}

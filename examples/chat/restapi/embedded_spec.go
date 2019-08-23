@@ -80,6 +80,27 @@ func init() {
         }
       }
     },
+    "/v1/members": {
+      "get": {
+        "description": "Get the list of chat memebers",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Get the list of chat members",
+        "operationId": "members",
+        "responses": {
+          "200": {
+            "description": "Memebers list",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/subscribe/{name}": {
       "get": {
         "description": "Subscribe to the chat events",
@@ -238,6 +259,27 @@ func init() {
             "description": "A chat acknowledgement",
             "schema": {
               "$ref": "#/definitions/message"
+            }
+          }
+        }
+      }
+    },
+    "/v1/members": {
+      "get": {
+        "description": "Get the list of chat memebers",
+        "produces": [
+          "application/json"
+        ],
+        "summary": "Get the list of chat members",
+        "operationId": "members",
+        "responses": {
+          "200": {
+            "description": "Memebers list",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           }
         }
