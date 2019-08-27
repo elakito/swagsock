@@ -1,0 +1,40 @@
+==== multiroom chat server and client
+
+This chat server is a REST server that uses Swaggersocket to provide a multiroom chat service.
+
+The server side code has been generated from the included https://raw.githubusercontent.com/elakito/swagsock/master/examples/chat-multiroom/swagger.json[swagger.json] using go swagger (version 0.19.0) by command
+----
+$ swagger generate server -f swagger.json -A chat-multiroom-demo
+----
+
+The chat service provides the following operations.
+
+
+subscribe        -  subscribe to a chat room channel
+unsubscribe      -  unsubscribe from the chat channel
+chat             -  chat with everyone on the chat room
+rooms            -  get the list of available chat rooms
+roomsMembers     -  get the list of chat members in the chat room
+
+These operations take advantage of Websocket and the chat clients can send and receive messages asynchronously over Websocket.
+
+
+===== Run
+To start this server at http port 8091
+----
+$ go run cmd/chat-multirooms-demo-server/main.go --scheme http --port 8091
+----
+
+.Console
+----
+$ go run cmd/chat-multirooms-demo-server/main.go --scheme http --port 8091
+2018/04/07 09:26:47 Serving chat multirooms demo at http://127.0.0.1:8091
+----
+
+and open the page http://localhost:8091/ui/ to use the chat client.
+
+1. Enter your nickname.
+2. You will automatically enter room 'general'.
+3. Start chatting with others in the room or move to another room and chat.
+
+

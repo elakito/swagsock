@@ -162,19 +162,41 @@ func (ph *protocolHandler) deleteConnection(conn *websocket.Conn) string {
 }
 
 type defaultResponseMediator struct {
+	// subscriptionid -> reusableresponder
 	responders map[string]*ReusableResponder
+	// topic -> subscriptionid set
+	topicsubs map[string]map[string]struct{}
+	// subscriptionid -> topic
+	substopics map[string]string
 	sync.RWMutex
 }
 
 // NewDefaultResponseMediator returns a new default ResponseMediator
 func NewDefaultResponseMediator() ResponseMediator {
-	return &defaultResponseMediator{responders: make(map[string]*ReusableResponder)}
+	return &defaultResponseMediator{responders: make(map[string]*ReusableResponder), topicsubs: make(map[string]map[string]struct{}), substopics: make(map[string]string)}
 }
 
 func (m *defaultResponseMediator) Subscribe(key string, name string, responder middleware.Responder, hello []byte, bye []byte) middleware.Responder {
-	rr := NewReusableResponder(name, responder, m, hello, bye)
+	rr := NewReusableResponder(name, "", responder, m, hello, bye)
 	m.Lock()
 	defer m.Unlock()
+	m.responders[key] = rr
+	return rr
+}
+
+func (m *defaultResponseMediator) SubscribeTopic(key string, topic string, name string, responder middleware.Responder, hello []byte, bye []byte) middleware.Responder {
+	rr := NewReusableResponder(name, topic, responder, m, hello, bye)
+	m.Lock()
+	defer m.Unlock()
+	var subs map[string]struct{}
+	if s, ok := m.topicsubs[topic]; !ok {
+		subs = make(map[string]struct{})
+		m.topicsubs[topic] = subs
+	} else {
+		subs = s
+	}
+	subs[key] = struct{}{}
+	m.substopics[key] = topic
 	m.responders[key] = rr
 	return rr
 }
@@ -184,10 +206,18 @@ func (m *defaultResponseMediator) Unsubscribe(key string, subid string) {
 	m.Lock()
 	defer m.Unlock()
 	if r := m.responders[unsubid]; r != nil {
-		delete(m.responders, unsubid)
 		if r.bye != nil {
-			m.write("*", r.bye)
+			if r.topic == "" {
+				m.write("*", r.bye)
+			} else {
+				m.writeTopic("*", r.bye)
+			}
 		}
+		if t, ok := m.substopics[unsubid]; ok {
+			delete(m.topicsubs[t], unsubid)
+		}
+		delete(m.responders, unsubid)
+
 	}
 }
 
@@ -198,6 +228,9 @@ func (m *defaultResponseMediator) UnsubscribeAll(trackingID string) {
 	for key := range m.responders {
 		if strings.HasPrefix(key, trackingID) {
 			if r := m.responders[key]; r != nil {
+				if t, ok := m.substopics[key]; ok {
+					delete(m.topicsubs[t], key)
+				}
 				delete(m.responders, key)
 				if r.bye != nil {
 					byebye = append(byebye, r.bye)
@@ -224,6 +257,32 @@ func (m *defaultResponseMediator) Subscribed() []string {
 	return subs
 }
 
+func (m *defaultResponseMediator) SubscribedTopics() []string {
+	topics := make([]string, 0)
+	m.RLock()
+	defer m.RUnlock()
+	for t := range m.topicsubs {
+		topics = append(topics, t)
+	}
+	return topics
+}
+
+func (m *defaultResponseMediator) SubscribedTopic(topic string) []string {
+	subs := make([]string, 0)
+	seen := make(map[string]struct{})
+	m.RLock()
+	defer m.RUnlock()
+	if ss, ok := m.topicsubs[topic]; ok {
+		for s := range ss {
+			rname := m.responders[s].name
+			if _, ok := seen[rname]; !ok {
+				subs = append(subs, rname)
+			}
+		}
+	}
+	return subs
+}
+
 func (m *defaultResponseMediator) Write(name string, data []byte) error {
 	m.RLock()
 	defer m.RUnlock()
@@ -232,8 +291,33 @@ func (m *defaultResponseMediator) Write(name string, data []byte) error {
 }
 func (m *defaultResponseMediator) write(name string, data []byte) {
 	for _, r := range m.responders {
-		if r.Match(name) {
+		if name == "*" || name == r.name {
 			if _, err := r.Write(data); err != nil {
+				// log error
+			}
+		}
+	}
+}
+
+func (m *defaultResponseMediator) WriteTopic(topic string, data []byte) error {
+	m.RLock()
+	defer m.RUnlock()
+	m.writeTopic(topic, data)
+	return nil
+}
+
+func (m *defaultResponseMediator) writeTopic(topic string, data []byte) {
+	if topic == "*" {
+		for _, ss := range m.topicsubs {
+			for s := range ss {
+				if _, err := m.responders[s].Write(data); err != nil {
+					// log error
+				}
+			}
+		}
+	} else if ss, ok := m.topicsubs[topic]; ok {
+		for s := range ss {
+			if _, err := m.responders[s].Write(data); err != nil {
 				// log error
 			}
 		}
@@ -388,13 +472,14 @@ func buildRequestKey(trackingid string, reqid string) string {
 }
 
 // NewReusableResponder wraps the original responder to capture the underlining durable connection for later use
-func NewReusableResponder(key string, r middleware.Responder, mediator ResponseMediator, hello []byte, bye []byte) *ReusableResponder {
-	return &ReusableResponder{name: key, responder: r, mediator: mediator, hello: hello, bye: bye}
+func NewReusableResponder(key string, topic string, r middleware.Responder, mediator ResponseMediator, hello []byte, bye []byte) *ReusableResponder {
+	return &ReusableResponder{name: key, topic: topic, responder: r, mediator: mediator, hello: hello, bye: bye}
 }
 
 // ReusableResponder is a middleware.Responder which grab the http.ResponseWriter for later reuse
 type ReusableResponder struct {
 	name      string
+	topic     string
 	responder middleware.Responder
 	hello     []byte
 	bye       []byte
@@ -409,16 +494,15 @@ func (r *ReusableResponder) WriteResponse(rw http.ResponseWriter, producer runti
 	}
 	r.responder.WriteResponse(rw, producer)
 	if r.hello != nil {
-		r.mediator.Write("*", r.hello)
+		if r.topic == "" {
+			r.mediator.Write("*", r.hello)
+		} else {
+			r.mediator.WriteTopic("*", r.hello)
+		}
 	}
 }
 
 // Write writes the subsequent response to the response writer
 func (r *ReusableResponder) Write(b []byte) (int, error) {
 	return r.writer.Write(b)
-}
-
-// Match returns true if the specified name matches this responder
-func (r *ReusableResponder) Match(name string) bool {
-	return name == "*" || name == r.name
 }

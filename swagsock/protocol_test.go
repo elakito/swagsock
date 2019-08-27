@@ -138,9 +138,63 @@ func TestDefaultResponseMediator(t *testing.T) {
 	mediator.Write("*", []byte("hello"))
 
 	assert.Equal(t, "hihola#swaggeradioshello", w1.buf.String())
-	assert.Equal(t, "hi#swagger", w2.buf.String())
+	assert.Equal(t, "hi#swaggeradios", w2.buf.String())
 	assert.Equal(t, "hallo#swaggeradioshello", w3.buf.String())
 	assert.Equal(t, 2, len(mediator.responders))
+
+	mediator.UnsubscribeAll("foo")
+	mediator.UnsubscribeAll("bar")
+	assert.Equal(t, 0, len(mediator.responders))
+}
+
+func TestDefaultResponseMediatorTopics(t *testing.T) {
+	mediator := NewDefaultResponseMediator().(*defaultResponseMediator)
+	r1 := &testOK{}
+	w1 := &testWriter{}
+	rr1 := mediator.SubscribeTopic("foo#0", "general", "naranja", r1, nil, nil)
+	rr1.WriteResponse(w1, nil)
+
+	r2 := &testOK{}
+	w2 := &testWriter{}
+	rr2 := mediator.SubscribeTopic("bar#2", "general", "manzana", r2, []byte("hi"), []byte("adios"))
+	rr2.WriteResponse(w2, nil)
+
+	r3 := &testOK{}
+	w3 := &testWriter{}
+	rr3 := mediator.SubscribeTopic("bar#5", "general", "orange", r3, nil, nil)
+	rr3.WriteResponse(w3, nil)
+
+	r4 := &testOK{}
+	w4 := &testWriter{}
+	rr4 := mediator.SubscribeTopic("bar#7", "private", "manzana", r4, []byte("hi"), []byte("adios"))
+	rr4.WriteResponse(w4, nil)
+
+	r5 := &testOK{}
+	w5 := &testWriter{}
+	rr5 := mediator.SubscribeTopic("bar#8", "private", "orange", r5, nil, nil)
+	rr5.WriteResponse(w5, nil)
+
+	mediator.WriteTopic("general", []byte("hola"))
+	mediator.WriteTopic("general", []byte("hallo"))
+	mediator.WriteTopic("*", []byte("#swagger"))
+
+	assert.Equal(t, "hihiholahallo#swagger", w1.buf.String())
+	assert.Equal(t, "hihiholahallo#swagger", w2.buf.String())
+	assert.Equal(t, "hiholahallo#swagger", w3.buf.String())
+	assert.Equal(t, "hi#swagger", w4.buf.String())
+	assert.Equal(t, "#swagger", w5.buf.String())
+	assert.Equal(t, 5, len(mediator.responders))
+
+	mediator.Unsubscribe("bar#10", "2")
+	mediator.WriteTopic("private", []byte("bien"))
+	mediator.WriteTopic("*", []byte("hello"))
+
+	assert.Equal(t, "hihiholahallo#swaggeradioshello", w1.buf.String())
+	assert.Equal(t, "hihiholahallo#swaggeradios", w2.buf.String())
+	assert.Equal(t, "hiholahallo#swaggeradioshello", w3.buf.String())
+	assert.Equal(t, "hi#swaggeradiosbienhello", w4.buf.String())
+	assert.Equal(t, "#swaggeradiosbienhello", w5.buf.String())
+	assert.Equal(t, 4, len(mediator.responders))
 
 	mediator.UnsubscribeAll("foo")
 	mediator.UnsubscribeAll("bar")

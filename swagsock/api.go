@@ -26,11 +26,25 @@ type ProtocolHandler interface {
 
 // ResponseMediator is the interface to manage responders and delivery of responses to the subscribers
 type ResponseMediator interface {
+	// Subscribe subscribes to the specified name. Parameters responder, hello, and bye represent the response sent
+	// to the requester, the optional hello and bye messages sent to the subscribers.
 	Subscribe(key string, name string, responder middleware.Responder, hello []byte, bye []byte) middleware.Responder
+	SubscribeTopic(key string, topic string, name string, responder middleware.Responder, hello []byte, bye []byte) middleware.Responder
+
+	// Unsubscribe cancels the subscription associated with the subscription id (i.e., the request id used for the subscription)
 	Unsubscribe(key string, subid string)
+
+	// UnsubscribeAll cancels all the subscriptions associated with the swaggersocket key.
 	UnsubscribeAll(key string)
+
+	// Subscribed returns the list of active subscriber names.
 	Subscribed() []string
+	SubscribedTopics() []string
+	SubscribedTopic(topic string) []string
+
+	// Write writes to the specified subscriber or to all subscribers when name is '*'.
 	Write(name string, data []byte) error
+	WriteTopic(topic string, data []byte) error
 }
 
 // Logger is the interface for logging

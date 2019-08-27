@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+  <title>Swaggersocket Multirooms-Chat</title>
+  <!-- the idea about this comes from github.com/Atmosphere/atmosphere-samples/samples/chat-multiroom -->
+  <link rel="stylesheet" href="lib/bootstrap-3.3.7.min.css">
+  <script type="text/javascript" src="lib/jquery-2.2.4.min.js"></script>
+  <script type="text/javascript" src="lib/bootstrap-3.3.7.min.js"></script>
+  <script type="text/javascript" src="lib/application.js"></script>
+  <style>
+    * {font-family: tahoma; font-size: 12px; padding: 0px; margin: 0px;}
+    p {line-height: 18px; margin: 0px;}
+    div {width: 600px; margin-left: auto; margin-right: auto;}
+    #content {padding: 5px; background: #ddd; border-radius: 5px; border: 1px solid #ccc; margin-top: 10px;}
+    #roomcontent {padding: 5px; background: #ddd; border-radius: 5px; border: 1px solid #ccc; margin-top: 10px;}
+    #header {padding: 5px; background: #d5f6ff; border-radius: 5px; border: 1px solid L=#ccc; margin-top: 10px;}
+    #newroomname {border-radius: 2px; border: 1px solid #ccc; margin-top: 10px; padding: 5px; width: 200px;}
+    #input {border-radius: 2px; border: 1px solid #ccc; margin-top: 10px; padding: 5px; width: 500px;}
+    #updateinput {border-radius: 2px; border: 1px solid #ccc; margin-top: 10px; padding: 5px; width: 500px;}
+    #status {width: 88px; display: block; float: left; margin-top: 15px;}
+    #room {width: 500px; display: block; float: left; margin-top: 10px;}
+    [id^="room"] {padding: 5px; background: #ddd;border-radius: 5px; border: 1px solid #ccc; margin-top: 5px; }
+  </style>
+</head>
+<body>
+    <div id="header"><strong>Multirooms Chat over go-openapi rest server with swaggersocket protocol handler</strong></div>
+    <div id="content"></div>
+    <div>
+      <div id="checklist">Available Rooms: </div>
+      <div id="createroom">
+        <input type="button" id="buttonroom" value="New Room"/>
+      </div>
+      <div>
+        <ul class="nav nav-tabs"></ul>
+        <div class="tab-content"></div>
+      </div>
+      <div>
+        <span id="status">Connecting...</span>
+        <input type="text" id="input" disabled="disabled"/>
+        <span id="inroom"></span>
+      </div>
+      <div class="modal fade" id="updatemodal" role="dialog">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+              <h4 class="modal-title" id="updatetitle">Untitled</h4>
+            </div>
+            <div class="modal-body">
+              <div id="updatename"></div> <input id="updateinput" value=""/>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-default" data-dismiss="modal" id="updatebutton">OK</button>
+              <button class="btn btn-default" data-dismiss="modal">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+</body>

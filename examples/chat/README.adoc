@@ -32,3 +32,6 @@ $ go run cmd/chat-demo-server/main.go --scheme http --port 8091
 
 and open the page http://localhost:8091/ui/ to use the chat client.
 
+1. Enter your nickname.
+2. Start chatting with others.
+
