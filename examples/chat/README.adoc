@@ -13,6 +13,7 @@ The chat service provides the following operations.
 subscribe   -  subscribe to the chat channel
 unsubscribe -  unsubscribe from the chat channel
 chat        -  chat with everyone on the chat channel
+members     -  get the list of chat members
 
 These operations take advantage of Websocket and the chat clients can send and receive messages asynchronously over Websocket.
 
@@ -26,7 +27,7 @@ $ go run cmd/chat-demo-server/main.go --scheme http --port 8091
 .Console
 ----
 $ go run cmd/chat-demo-server/main.go --scheme http --port 8091
-2018/04/07 09:26:47 Serving greeter demo at http://127.0.0.1:8091
+2018/04/07 09:26:47 Serving chat demo at http://127.0.0.1:8091
 ----
 
 and open the page http://localhost:8091/ui/ to use the chat client.
