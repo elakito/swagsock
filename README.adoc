@@ -129,7 +129,13 @@ A sampel client side code is located at https://github.com/elakito/swagsock/tree
 
 ==== Samples
  * https://github.com/elakito/swagsock/tree/master/examples/greeter[examples/greeter]
-  - This server is generated from examples/greeter/swagger.yaml using go-swagger and it is enabled for websocket
+  - This server is generated from examples/greeter/swagger.yaml using go-swagger and it is enabled for websocket. This service has normal request and response operations for greeting service and in addition, the subscribe and unsubscribe operations to subsribe to the greet events and receive the greeting events asynchronously.
+
+ * https://github.com/elakito/swagsock/tree/master/examples/chat[examples/chat]
+  - This server is generated from examples/chat/swagger.yaml using go-swagger and it is enabled for websocket. This is a chat service.
+
+ * https://github.com/elakito/swagsock/tree/master/examples/chat-multirooms[examples/chat-multirooms]
+  - This server is generated from examples/chat-multirooms/swagger.yaml using go-swagger and it is enabled for websocket. This  is a chat service supporting multiple chat rooms.
 
  * https://github.com/elakito/swagsock/tree/master/examples/clients/node-client[examples/clients/node-client]
   - A node.js client to call the greeter service.
