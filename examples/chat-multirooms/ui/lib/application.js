@@ -223,7 +223,7 @@ $(function () {
 
             $('#check'+name).click(function() {
                 var room = $(this).attr('id').substring(5);
-                if ($(this).is(':checked') || c) {
+                if ($(this).is(':checked')) {
                     if ($('#navroom'+room).val() === undefined) {
                         $('.nav-tabs').append('<li><a data-toggle="tab" href="#room'+room+'" id="navroom'+room+'">'+room+'</a></li>');
                         $('.tab-content').append('<div id="room'+room+'" class="tab-pane fade"></div>');
