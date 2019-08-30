@@ -56,7 +56,7 @@ $(function () {
                 rooms = {};
                 members = {};
                 roomsid = getNextId();
-                req = JSON.stringify({ "id": roomsid, "method": "GET", "path": "/v1/rooms"});
+                var req = JSON.stringify({ "id": roomsid, "method": "GET", "path": "/v1/rooms"});
                 socket.send(req);
             }
         };
@@ -185,7 +185,7 @@ $(function () {
                 status.text(author + ': ').css('color', 'blue');
                 rooms = {};
                 roomsid = getNextId();
-                req = JSON.stringify({ "id": roomsid, "method": "GET", "path": "/v1/rooms"});
+                var req = JSON.stringify({ "id": roomsid, "method": "GET", "path": "/v1/rooms"});
                 console.log("### sending req="+req);
                 socket.send(req);
                 $(this).val('');
