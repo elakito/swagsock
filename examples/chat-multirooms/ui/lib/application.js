@@ -11,11 +11,8 @@ $(function () {
     var buttonroom = $('#buttonroom');
 
     var socket;
-    var isopen = false;
-    var count = 0;
+    var isopen;
     
-    var trackingid = createtrackingid();
-
     // chat-author
     var author;
     // subid->room
@@ -28,11 +25,8 @@ $(function () {
     var memids = {};
     // room in focus
     var chatroom;
-    // room -> (member -> 
+    // room -> (member -> "")
     var members = {};
-    // room -> 
-    var contents = {};
-
     
     checklist.hide();
     createroom.hide();
@@ -43,11 +37,13 @@ $(function () {
             webSocketProtocol = "wss"
         }
 
-        socket = new WebSocket(webSocketProtocol + "://" + window.location.host + "/samples/chat-multirooms/?x-tracking-id="+trackingid);
-
-        socket.onopen = function(event) {
+        socket = swagsock.swaggersocket(webSocketProtocol + "://" + window.location.host + "/samples/chat-multirooms/");
+        socket.on("open", function () {
             isopen = true;
             content.html($('<p>', { text: 'Connected using websocket'}));
+            for (var subid in subids) {
+                addStatusMessage(subids[subid], 'Connected using websocket');
+            }
             input.removeAttr('disabled').focus();
             if (author === undefined) {
                 status.text('Choose name:');
@@ -55,113 +51,34 @@ $(function () {
                 status.text(author + ': ').css('color', 'blue');
                 rooms = {};
                 members = {};
-                roomsid = getNextId();
-                var req = JSON.stringify({ "id": roomsid, "method": "GET", "path": "/v1/rooms"});
-                socket.send(req);
+                doRooms();
+                var oldsubids = subids;
+                subids = {};
+                for (var oldsubid in oldsubids) {
+                    // subscribe to the previously subscribed rooms
+                    var oldroom = oldsubids[oldsubid]
+                    var subid = doSubscribe(author, oldroom);
+                    rooms[oldroom] = subid;
+                    subids[subid] = oldroom;
+                }
             }
-        };
-
-        socket.onclose = function(event) {
+        });
+        
+        socket.on("close", function () {
             content.html($('<p>', { text: 'Server closed the connection' }));
+            for (var subid in subids) {
+                addStatusMessage(subids[subid], 'Server closed the connection');
+            }
             input.attr('disabled', 'disabled');
             isopen = false;
-        };
+        });
 
-        socket.onerror = function(event) {
+        socket.on("error", function (event) {
             content.html($('<p>', { text: 'Server encountered some problem' }));
             input.attr('disabled', 'disabled');
-        };
+        });
 
-        socket.onmessage = function(event) {
-            console.log("#### onmessage " + event.data);
-            var messageparts = splitMessage(event.data);
-            var headers;
-            try {
-                headers = JSON.parse(messageparts[0]);
-            } catch (e) {
-                console.log('Invalid header part: ', event.data);
-                return;
-            }
-            if (headers.heartbeat) {
-                // ignore
-            } else {
-                var body;
-                try {
-                    body = JSON.parse(messageparts[1]);
-                } catch (e) {
-                    console.log('Invalid body part: ', event.data);
-                    return;
-                }
-                if (headers.id in subids) {
-                    // messages via the subscriptions or the subscription confirmation
-                    var subid = headers.id;
-                    if (body.type === undefined) {
-                        // subscription confirmation
-                    } else if (subid === rooms[body.room]) {
-                        if (body.type === "message") {
-                            addMessage(body.name, body.room, body.text, (body.name === author) ? 'blue' : 'black', new Date());
-                        } else if (body.type === "joined") {
-                            addMessage(body.name, body.room, body.type, 'crimson', new Date());
-                            if (body.name === author) {
-                                var memid = getNextId();
-                                memids[memid] = body.room;
-                                var req = JSON.stringify({ "id": memid, "method": "GET", "path": "/v1/rooms/" + body.room});
-                                socket.send(req);
-                            } else {
-                                members[body.room][body.name] = "";
-                                if (chatroom === body.room) {
-                                    updateInRoom(members[body.room]);
-                                }
-                            }
-                        } else if (body.type === "left") {
-                            addMessage(body.name, body.room, body.type, 'crimson', new Date());
-                            if (body.name === author) {
-                                delete members[body.room];
-                                rooms[body.room] = "";
-                                updateInRoom(undefined);
-                            } else {
-                                delete members[body.room][body.name];
-                                if (chatroom === body.room) {
-                                    updateInRoom(members[body.room]);
-                                }
-                            }
-                        } else {
-                            // confirmation
-                        }
-                    } else {
-                        if (body.type === "joined" && !(body.room in rooms)) {
-                            rooms[body.room] = "";
-                            addCheckbox(body.room, false);
-                        }
-                    }
-                } else if (headers.id in memids) {
-                    var room = memids[headers.id];
-                    var mems = {};
-                    for (var i = 0; i < body.length; i++) {
-                        mems[body[i]] = "";
-                    }
-                    members[room] = mems;
-                    if (chatroom === room) {
-                        updateInRoom(mems);
-                    }
-                } else if (headers.id === roomsid) {
-                    // the initial rooms list
-                    for (var i = 0; i < body.length; i++) {
-                        rooms[body[i]] = "";
-                    }
-                    createCheckboxList();
-                    // subscribe automatically to the general room
-                    addCheckbox("general", true);
-                    $('#checkgeneral').attr('disabled', 'disabled');
-                } else {
-                    // messages over direct responses
-                    //TODO display the messages when debug mode
-                }
-            }
-        };
-    }
-    function checkWS() {
-        if (!socket || socket.readyState == 3) connectWS();
+        socket.open();
     }
 
     buttonroom.click(function () {
@@ -184,10 +101,7 @@ $(function () {
                 author = msg;
                 status.text(author + ': ').css('color', 'blue');
                 rooms = {};
-                roomsid = getNextId();
-                var req = JSON.stringify({ "id": roomsid, "method": "GET", "path": "/v1/rooms"});
-                console.log("### sending req="+req);
-                socket.send(req);
+                doRooms();
                 $(this).val('');
 
                 checklist.show();
@@ -201,8 +115,7 @@ $(function () {
                     if (rooms[room].length == 0) {
                         alert("you are not in a room. choose a room or create a new one.");
                     } else {
-                        var req = JSON.stringify({ "id": getNextId(), "method": "POST", "path": "/v1/chat/" + author + "/" + room, "type": "application/json"})+JSON.stringify({"text": msg});
-                        socket.send(req);
+                        doChat(author, room, JSON.stringify({"text": msg}));
                         $(this).val('');
                     }
                 }
@@ -217,6 +130,10 @@ $(function () {
                        + ': ' + message + '</p>');
     }
 
+    function addStatusMessage(room, message) {
+        $('#room'+room).append($('<p>', { text: message }));
+    }
+    
     function addCheckbox(name, c) {
         if ($('#check'+name).val() === undefined) {
             $('#checklist').append('<label class="checkbox-inline"><input type="checkbox" id="check'+name+'">'+name+"</label>");
@@ -237,17 +154,12 @@ $(function () {
                     }
                     chatroom = room;
                     $('#navroom'+room).tab('show');
-                    var subid = getNextId();
+                    var subid = doSubscribe(author, room);
                     rooms[room] = subid;
                     subids[subid] = room;
-                    var req = JSON.stringify({ "id": subid, "method": "GET", "path": "/v1/subscribe/" + author + "/" + room});
-                    console.log("#### sending req "+req);
-                    socket.send(req);
                 } else {
                     var subid = rooms[room];
-                    var req = JSON.stringify({ "id": getNextId(), "method": "DELETE", "path": "/v1/unsubscribe/" +subid});
-                    console.log("#### sending req "+req);
-                    socket.send(req);
+                    doUnsubscribe(subid);
                 }
             });
         }
@@ -284,43 +196,110 @@ $(function () {
                              });
         $("#updatemodal").modal("show")
     }
-    
-    // utilities
-    function getNextId() {
-        return (count++).toString();
-    }
 
-    function splitMessage(msg) {
-        var depth = 0;
-        var index = 0;
-        while (index < msg.length) {
-            var c = msg.charAt(index);
-            if (c === '{') {
-                depth++;
-            } else if (c == '}') {
-                depth--;
-            } else if (c == '\\') {
-                index++;
+    ////////////
+
+    function doSubscribe(name, room) {
+        var req = socket.request().pathpattern("/v1/subscribe/{name}/{room}").pathparam("name", name).pathparam("room", room).subscribe();
+        socket.send(req, function (header, content){
+            if (header.code === 200) {
+                // messages via the subscriptions or the subscription confirmation
+                var subid = header.id;
+                var body = JSON.parse(content);
+                if (body.type === undefined) {
+                    // subscription confirmation
+                } else if (subid === rooms[body.room]) {
+                    if (body.type === "message") {
+                        addMessage(body.name, body.room, body.text, (body.name === author) ? 'blue' : 'black', new Date());
+                    } else if (body.type === "joined") {
+                        addMessage(body.name, body.room, body.type, 'crimson', new Date());
+                        if (body.name === author) {
+                            var memid = doRoomMembers(body.room);
+                            memids[memid] = body.room;
+                        } else {
+                            members[body.room][body.name] = "";
+                            if (chatroom === body.room) {
+                                updateInRoom(members[body.room]);
+                            }
+                        }
+                    } else if (body.type === "left") {
+                        addMessage(body.name, body.room, body.type, 'crimson', new Date());
+                        if (body.name === author) {
+                            delete members[body.room];
+                            rooms[body.room] = "";
+                            updateInRoom(undefined);
+                        } else {
+                            delete members[body.room][body.name];
+                            if (chatroom === body.room) {
+                                updateInRoom(members[body.room]);
+                            }
+                        }
+                    } else {
+                        // confirmation
+                    }
+                } else {
+                    if (body.type === "joined" && !(body.room in rooms)) {
+                        rooms[body.room] = "";
+                        addCheckbox(body.room, false);
+                    }
+                }
             }
-            index++;
-            if (depth == 0) {
-                break;
+        });
+        return req.getrequestid();
+    }
+
+    function doUnsubscribe(sid) {
+        var req = socket.request().pathpattern("/v1/unsubscribe/{sid}").pathparam("sid", sid).method("DELETE").unsubscribe(sid);
+        socket.send(req);
+        return req.getrequestid();
+    }
+
+    function doChat(name, room, content) {
+        var req = socket.request().pathpattern("/v1/chat/{name}/{room}").pathparam("name", name).pathparam("room", room).method("POST").content(content, "application/json");
+        socket.send(req);
+        return req.getrequestid();
+    }
+
+    function doRooms() {
+        var req = socket.request().pathpattern("/v1/rooms");
+        socket.send(req, function (header, content) {
+            if (header.code === 200) {
+                var body = JSON.parse(content);
+                // the initial rooms list
+                for (var i = 0; i < body.length; i++) {
+                    var room = body[i];
+                    if (!rooms[room]) {
+                        rooms[room] = "";
+                    }
+                }
+                createCheckboxList();
+                // subscribe automatically to the general room
+                addCheckbox("general", true);
+                $('#checkgeneral').attr('disabled', 'disabled');
             }
-        }
-        return [msg.substring(0, index), msg.substring(index)]
+        });
+        return req.getrequestid();
     }
 
-    // for browser demo only as a replacement for npm uuid
-    function createtrackingid() {
-        const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        var text = "";
-        for(var i = 0; i < 16; i++) {
-            text += possible.charAt(Math.floor(Math.random() *possible.length));
-        }
-        return text;
+    function doRoomMembers(room) {
+        var req = socket.request().pathpattern("/v1/rooms/{room}").pathparam("room", room);
+        socket.send(req, function (header, content) {
+            if (header.code === 200) {
+                var room = memids[header.id];
+                var body = JSON.parse(content);
+                var mems = {};
+                for (var i = 0; i < body.length; i++) {
+                    mems[body[i]] = "";
+                }
+                members[room] = mems;
+                if (chatroom === room) {
+                    updateInRoom(mems);
+                }
+            }
+        });
+        return req.getrequestid();
     }
 
+    ////////////
     connectWS();
-    setInterval(checkWS, 5000);
-    
 });

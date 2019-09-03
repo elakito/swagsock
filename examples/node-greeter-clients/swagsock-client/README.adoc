@@ -1,0 +1,4 @@
+==== greeter node swagsocket client
+
+This greeter client is a Websocket client to call the greeter demo service. See the instruction
+for running this client at https://github.com/elakito/swagsock/tree/master/examples/greeter[examples/greeter]

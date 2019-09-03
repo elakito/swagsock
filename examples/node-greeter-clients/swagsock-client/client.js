@@ -1,7 +1,7 @@
 /**
  * client.js
  * 
- * A node client program to interactively calls the greeter service
+ * An atmosphere node client program to interactively calls the greeter service
  * 
  * Usages: 
  * node client.js [options] [greeter-url]
@@ -29,9 +29,6 @@ var authpassword
 var insecure;
 var trace = false;
 
-const uuidv4 = require('uuid/v4');
-var clientid = uuidv4();
-
 var arg;
 for (var i = 2; i < process.argv.length; i++) {
     arg = process.argv[i];
@@ -53,7 +50,6 @@ if (arg != undefined) {
     hosturl = arg;
 }
 
-console.log("Client ID: " + clientid);
 console.log("Host URL: " + hosturl + (authuser != undefined ? " (Basic" : " (No") + " Authentication)")
 
 var reader = require('readline');
@@ -88,11 +84,8 @@ if (authuser !== undefined) {
     queryUser();
 }
 
-const WebSocket = require('ws')
+const swagsock = require('swagsock.js');
 var isopen = false;
-
-// request/respons index
-var count = 0;
 
 // greeter's consle commands
 const COMMAND_LIST = 
@@ -108,30 +101,6 @@ const COMMAND_LIST =
 
 
 /////////////// utilities
-
-function splitMessage(msg) {
-    var depth = 0;
-    var index = 0;
-    while (index < msg.length) {
-        var c = msg.charAt(index);
-        if (c === '{') {
-            depth++;
-        } else if (c == '}') {
-            depth--;
-        } else if (c == '\\') {
-            index++;
-        }
-        index++;
-        if (depth == 0) {
-            break;
-        }
-    }
-    return [msg.substring(0, index), msg.substring(index)]
-}
-
-function getNextId() {
-    return (count++).toString();
-}
 
 function selectOption(c, opts) {
     var i = c.length == 0 ? 0 : parseInt(c);
@@ -223,17 +192,19 @@ function doHelp(v) {
     }
 }
 
+function toConsole(header, content) {
+    console.log("res"+header.id+":", JSON.stringify(header) + content);
+    prompt.setPrompt(userprompt, 2);
+    prompt.prompt();
+}
+
 function doGreet(v) {
     if (!v) {
         errorUsage("greet");
         return;
     }
-    var req = JSON.stringify({ "id": getNextId(), "method": "POST", "path": "/v1/greet/" + user, "type": "application/json"})+JSON.stringify({ "name": v[0], "text": v[1]});
-
-    if (trace) {
-        console.log("TRACE: sending ", req);
-    }
-    subSocket.send(req);
+    var req = swagSocket.request().pathpattern("/v1/greet/{name}").pathparam("name", user).method("POST").content(JSON.stringify({ "name": v[0], "text": v[1]}), "application/json");
+    swagSocket.send(req, toConsole);
 }
 
 function doStatus(v) {
@@ -241,30 +212,18 @@ function doStatus(v) {
         errorUsage("status");
         return;
     }
-    var req = JSON.stringify({ "id": getNextId(), "method": "GET", "path": "/v1/greet/" + v[0]});
-
-    if (trace) {
-        console.log("TRACE: sending ", req);
-    }
-    subSocket.send(req);
+    var req = swagSocket.request().pathpattern("/v1/greet/{name}").pathparam("name", v[0]);
+    swagSocket.send(req, toConsole);
 }
 
 function doSummary(v) {
-    var req = JSON.stringify({ "id": getNextId(), "method": "GET", "path": "/v1/greet"});
-
-    if (trace) {
-        console.log("TRACE: sending ", req);
-    }
-    subSocket.send(req);
+    var req = swagSocket.request().pathpattern("/v1/greet");
+    swagSocket.send(req, toConsole);
 }
 
 function doSubscribe(v) {
-    var req = JSON.stringify({ "id": getNextId(), "method": "GET", "path": "/v1/subscribe/" + user});
-
-    if (trace) {
-        console.log("TRACE: sending ", req);
-    }
-    subSocket.send(req);
+    var req = swagSocket.request().pathpattern("/v1/subscribe/{name}").pathparam("name", user).subscribe(true);
+    swagSocket.send(req, toConsole);
 }
 
 function doUnsubscribe(v) {
@@ -273,21 +232,13 @@ function doUnsubscribe(v) {
         return;
     }
 
-    var req = JSON.stringify({ "id": getNextId(), "method": "DELETE", "path": "/v1/unsubscribe/" + v[0]});
-
-    if (trace) {
-        console.log("TRACE: sending ", req);
-    }
-    subSocket.send(req);
+    var req = swagSocket.request().pathpattern("/v1/unsubscribe/{sid}").pathparam("sid", v[0]).method("DELETE").unsubscribe(v[0]);
+    swagSocket.send(req, toConsole);
 }
 
 function doPing(v) {
-    var req = JSON.stringify({ "id": getNextId(), "method": "GET", "path": "/v1/ping"});
-
-    if (trace) {
-        console.log("TRACE: sending ", req);
-    }
-    subSocket.send(req);
+    var req = swagSocket.request().pathpattern("/v1/ping");
+    swagSocket.send(req, toConsole);
 }
 
 function doEcho(v) {
@@ -295,90 +246,20 @@ function doEcho(v) {
         errorUsage("echo");
         return;
     }
-    var req = JSON.stringify({ "id": getNextId(), "method": "POST", "path": "/v1/echo", "type": "text/plain"})+v[0];
-
-    if (trace) {
-        console.log("TRACE: sending ", req);
-    }
-    subSocket.send(req);
+    var req = swagSocket.request().pathpattern("/v1/echo").method("POST").content(v[0], "text/plain");
+    swagSocket.send(req, toConsole);
 }
 
 
 function doQuit() {
-    subSocket.close();
+    swagSocket.close();
     process.exit(0);
 }
 
 ////////////////////
 
 var transport = null;
-var subSocket = null;
-
-function connect() {
-    subSocket = new WebSocket(hosturl + (hosturl.indexOf("?") > 0 ? "&" : "?") + "x-tracking-id=" + clientid, {
-        perMessageDeflate: false,
-        rejectUnauthorized: !insecure,
-        headers: headers,
-    });
-    subSocket.on('open', function open() {
-        isopen = true;
-        console.log('Connected using websocket');
-        prompt.setPrompt(userprompt, 2);
-        prompt.prompt();
-    });
-
-    subSocket.on('message', function incoming(message) {
-        var jpart;
-        var data;
-        var json;
-        //FIXME use a better logic to determine the mode
-        var messageparts = splitMessage(message);
-        jpart = messageparts[0];
-        data = messageparts[1];
-        try {
-            json = JSON.parse(jpart);
-        } catch (e) {
-            console.log('Invalid response: ', message);
-            return;
-        }
-        if (json.heartbeat) {
-            // ignore
-        } else {
-            if (trace) {
-                console.log("TRACE: received " + message);
-                        prompt.setPrompt(userprompt, 2);
-                        prompt.prompt();
-                    }
-
-            if (json.error_code) {
-                console.log(jpart);
-            } else if (json.id) {
-                console.log("res" + json.id + ":", message);
-            } else {
-                // no id supplied in the response, so just write the plain result
-                console.log("res*" + ":", message)
-            }
-                }
-        prompt.setPrompt(userprompt, 2);
-        prompt.prompt();
-    });
-
-    subSocket.on('close', function close() {
-        console.log("Closed");
-        isopen = false;
-        console.log("Reconnecting ...");
-    });
-
-    subSocket.on('error', function error(message) {
-        console.log("Error: " + message);
-        prompt.setPrompt(userprompt, 2);
-        prompt.prompt();
-    });
-}
-
-function keepConnection() {
-    if (!subSocket || subSocket.readyState == 3) connect();
-}
+var swagSocket = null;
 
 var user = null;
 var userprompt = "> ";
@@ -389,8 +270,18 @@ on('line', function(line) {
         if (user == null) {
             user = msg
             userprompt = user + userprompt;
-            connect();
-            setInterval(keepConnection, 5000);
+            swagSocket = swagsock.swaggersocket(hosturl);
+            swagSocket.on("open", function() {
+                console.log('Connected using websocket');
+                prompt.setPrompt(userprompt, 2);
+                prompt.prompt();
+            });
+            swagSocket.on("close", function() {
+                console.log('Connection closed. Reconnecting ...');
+                prompt.setPrompt(userprompt, 2);
+                prompt.prompt();
+            });
+            swagSocket.open();
             console.log("Connecting using websocket ...");
         } else if (msg.length == 0) {
             doHelp();
