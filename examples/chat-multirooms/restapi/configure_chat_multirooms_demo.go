@@ -129,6 +129,7 @@ func globalMiddleware(handler http.Handler) http.Handler {
 
 	// instantiate the protocol handler
 	conf := swagsock.NewConfig()
+	conf.Heartbeat = 30
 	conf.Log = log.New(os.Stdout, "[swagsocket] ", log.LstdFlags)
 	responseMediator = conf.ResponseMediator
 

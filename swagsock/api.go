@@ -58,5 +58,6 @@ type Logger interface {
 type Config struct {
 	Codec            Codec
 	ResponseMediator ResponseMediator
+	Heartbeat        int
 	Log              Logger
 }

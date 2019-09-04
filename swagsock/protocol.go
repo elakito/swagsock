@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
@@ -87,13 +88,15 @@ func NewConfig() *Config {
 
 // CreateProtocolHandler creates a new ProtocolHandler with the specified codec. If codec is nil, the defaultCodec is used
 func CreateProtocolHandler(conf *Config) ProtocolHandler {
-	return &protocolHandler{codec: conf.Codec, mediator: conf.ResponseMediator, log: conf.Log, connections: make(map[*websocket.Conn]string)}
+	return &protocolHandler{
+		codec: conf.Codec, mediator: conf.ResponseMediator, heartbeat: conf.Heartbeat, log: conf.Log, connections: make(map[*websocket.Conn]string)}
 }
 
 type protocolHandler struct {
 	codec       Codec
 	connections map[*websocket.Conn]string
 	mediator    ResponseMediator
+	heartbeat   int
 	log         Logger
 	sync.RWMutex
 }
@@ -125,6 +128,23 @@ func (ph *protocolHandler) Serve(handler http.Handler, w http.ResponseWriter, r 
 
 	ph.log.Printf("connected at baseURI=%s, trackingID=%s", baseURI, trackingID)
 
+	var heartbeatstop chan struct{}
+	if ph.heartbeat > 0 {
+		heartbeatstop = make(chan struct{})
+		go func() {
+			ticker := time.NewTicker(time.Duration(ph.heartbeat) * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ticker.C:
+					conn.WriteControl(websocket.PingMessage, []byte{}, time.Time{})
+				case <-heartbeatstop:
+					return
+				}
+			}
+		}()
+	}
+
 	go func() {
 		for {
 			mt, p, err := conn.ReadMessage()
@@ -136,7 +156,11 @@ func (ph *protocolHandler) Serve(handler http.Handler, w http.ResponseWriter, r 
 			resp := newHTTPResponse(id, mt, conn, connlock, ph.codec)
 			handler.ServeHTTP(resp, req)
 		}
+		if heartbeatstop != nil {
+			heartbeatstop <- struct{}{}
+		}
 	}()
+
 }
 
 func (ph *protocolHandler) Destroy() {
