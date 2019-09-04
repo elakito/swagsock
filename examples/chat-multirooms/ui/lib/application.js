@@ -66,11 +66,13 @@ $(function () {
         
         socket.on("close", function () {
             content.html($('<p>', { text: 'Server closed the connection' }));
-            for (var subid in subids) {
-                addStatusMessage(subids[subid], 'Server closed the connection');
+            if (isopen) {
+                for (var subid in subids) {
+                    addStatusMessage(subids[subid], 'Server closed the connection');
+                }
+                input.attr('disabled', 'disabled');
+                isopen = false;
             }
-            input.attr('disabled', 'disabled');
-            isopen = false;
         });
 
         socket.on("error", function (event) {

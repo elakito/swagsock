@@ -120,9 +120,9 @@
                 
                 return {
                     open: function () {
-                        if (_baseurl.indexOf("http:") === 0) {
+                        if (_baseurl.indexOf("http") === 0) {
                             _wsurl = "ws" + _baseurl.substring(4);
-                        } else if (_baseurl.indexOf("ws:") === 0) {
+                        } else if (_baseurl.indexOf("ws") === 0) {
                             _wsurl = _baseurl;
                         }
                         

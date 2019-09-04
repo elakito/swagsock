@@ -36,14 +36,18 @@ $(function () {
         });
 
         socket.on("close", function () {
-            content.append($('<p>', { text: 'Server closed the connection' }));
-            input.attr('disabled', 'disabled');
-            isopen = false;
+            if (isopen) {
+                content.append($('<p>', { text: 'Server closed the connection' }));
+                input.attr('disabled', 'disabled');
+                isopen = false;
+            }
         });
 
         socket.on("error", function (event) {
-            content.append($('<p>', { text: 'Server encountered some problem' }));
-            input.attr('disabled', 'disabled');
+            if (isopen) {
+                content.append($('<p>', { text: 'Server encountered some problem' }));
+                input.attr('disabled', 'disabled');
+            }
         });
 
         socket.open();
