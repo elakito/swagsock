@@ -132,17 +132,19 @@ A sampel client side code is located at https://github.com/elakito/swagsock/tree
   - This server is generated from examples/greeter/swagger.yaml using go-swagger and it is enabled for websocket. This service has normal request and response operations for greeting service and in addition, the subscribe and unsubscribe operations to subsribe to the greet events and receive the greeting events asynchronously.
 
  * https://github.com/elakito/swagsock/tree/master/examples/chat[examples/chat]
-  - This server is generated from examples/chat/swagger.yaml using go-swagger and it is enabled for websocket. This is a chat service.
+  - This server is generated from examples/chat/swagger.yaml using go-swagger and it is enabled for websocket. This is a chat service. This example includes a browser client that uses swagsock.js.
 
  * https://github.com/elakito/swagsock/tree/master/examples/chat-multirooms[examples/chat-multirooms]
-  - This server is generated from examples/chat-multirooms/swagger.yaml using go-swagger and it is enabled for websocket. This  is a chat service supporting multiple chat rooms.
+  - This server is generated from examples/chat-multirooms/swagger.yaml using go-swagger and it is enabled for websocket. This is a chat service supporting multiple chat rooms. This example includes a browser client that uses swagsock.js.
 
- * https://github.com/elakito/swagsock/tree/master/examples/clients/node-client[examples/clients/node-client]
+ * https://github.com/elakito/swagsock/tree/master/examples/node-greeter-clients/node-client]
   - A node.js client to call the greeter service.
 
-* https://github.com/elakito/swagsock/tree/master/examples/clients/atmosphere-node-client[examples/clients/atmosphere-node-client]
+* https://github.com/elakito/swagsock/tree/master/examples/clients/atmosphere-node-client[examples/node-greeter-clients/atmosphere-node-client]
   - A node.js client based on atmosphere.js to call the greeter service.
 
+ * https://github.com/elakito/swagsock/tree/master/examples/node-greeter-clients/swagsock-client]
+  - A node.js client based on swagsock.js to call the greeter service.
 
 
 ==== References
