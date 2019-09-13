@@ -20,11 +20,12 @@
             return uuidv4();
         }
     }
-    
+
+    const protocol_version = "2.0";
+
     var swagsock = function () {
         return {
-            version: "0.0.1",
-
+            version: "0.0.2",
             swaggersocket: function (baseurl, trackingid) {
                 var _wsurl;
                 var _baseurl = baseurl;
@@ -34,9 +35,12 @@
                 var _callbacks = {};
                 // requestid->issubscribed
                 var _subscribed = {};
+                // requestid->data
+                var _continued = {};
                 var _ws;
                 var _handlers = {};
                 var _checkstatushandle;
+                var _handshaked;
 
                 function getnextid () {
                     return (_requestid++).toString();
@@ -72,10 +76,16 @@
                 function checkstatus() {
                     if (!_ws || _ws.readyState === 3) connect();
                 }
-                
+
+                function handshake() {
+                    _ws.send(JSON.stringify({"version":protocol_version}));
+                }
+
                 function connect() {
                     _ws = new WebSocket(_wsurl);
                     _ws.onopen = function (event) {
+                        _handshaked = false;
+                        handshake();
                         callhandler("open");
                     };
                     _ws.onclose = function (event) {
@@ -98,14 +108,30 @@
                         try {
                             header = JSON.parse(decoded.header);
                             content = decoded.content;
-                            if (header.heartbeat) {
-                                // ignore
+                            if (header.version && !_handshaked) {
+                                _handshaked = true;
+                                if (header.error) {
+                                    console.log("res*" + ":", message);
+                                    disconnect();
+                                }
                             } else if (header.id) {
-                                var callback = _callbacks[header.id];
-                                if (callback) {
-                                    callback(header, content);
-                                    if (!(header.id in _subscribed)) {
-                                        delete _callbacks[header.id];
+                                if (header.continue) {
+                                    if (_continued[header.id]) {
+                                        _continued[header.id] += content;
+                                    } else {
+                                        _continued[header.id] = content;
+                                    }
+                                } else {
+                                    var callback = _callbacks[header.id];
+                                    if (callback) {
+                                        if (_continued[header.id]) {
+                                            content = _continued[header.id] + content;
+                                            delete _continued[header.id];
+                                        }
+                                        callback(header, content);
+                                        if (!(header.id in _subscribed)) {
+                                            delete _callbacks[header.id];
+                                        }
                                     }
                                 }
                             } else {
@@ -116,6 +142,13 @@
                             console.log('Invalid response: ', message + "; error="+e);
                         }
                     };
+                }
+
+                function disconnect() {
+                    if (_checkstatushandle) {
+                        clearInterval(_checkstatushandle);
+                    }
+                    _ws.close();
                 }
                 
                 return {
@@ -135,7 +168,7 @@
                         _checkstatushandle = setInterval(checkstatus, 5000);
                     },
                     close: function () {
-                        _ws.close();
+                        disconnect();
                     },
                     on: function(event, handler) {
                         // open, close, error
@@ -242,4 +275,3 @@
     }();
     return swagsock;
 }));
-

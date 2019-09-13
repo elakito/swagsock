@@ -2,6 +2,7 @@ package swagsock
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -14,6 +15,8 @@ import (
 )
 
 var (
+	testTrackingID = "b0cbb3b4-aaee-a63a-49ae-0d5a31af9c93"
+
 	testMessageStrings = []string{
 		`{"id": "123", "method": "GET",
 			"path": "/ws/consumers/my_group/instances/my_instance/topics/my_topic",
@@ -75,6 +78,11 @@ var (
 	}
 
 	testContinuedMessageBody = `{"records":[{"value":"S2Fma2E="}]}`
+
+	testHandshakeReqString     = `{"version":"2.0"}`
+	testHandshakeReqBadString  = `{"version":"1.0"}`
+	testHandshakeRespString    = `{"version":"2.0","trackingID":"b0cbb3b4-aaee-a63a-49ae-0d5a31af9c93"}`
+	testHandshakeRespBadString = `{"version":"2.0","error":"version_mismatch"}`
 )
 
 func TestDefaultCodecEncode(t *testing.T) {
@@ -142,12 +150,26 @@ func TestNewHTTPRequest(t *testing.T) {
 		assert.Equal(t, buildRequestKey("default", rid), GetRequestKey(req))
 	}
 }
+func TestHandshake(t *testing.T) {
+	conf := NewConfig()
+	ph, ok := CreateProtocolHandler(conf).(*protocolHandler)
+	assert.True(t, ok)
+	writer := &testConnectionWriter{}
+
+	// good handshake
+	ph.handshake([]byte(testHandshakeReqString), testTrackingID, writer)
+	assert.Equal(t, testHandshakeRespString, writer.data.String())
+
+	// bad handshake
+	writer.data.Reset()
+	ph.handshake([]byte(testHandshakeReqBadString), testTrackingID, writer)
+	assert.Equal(t, testHandshakeRespBadString, writer.data.String())
+}
 
 func TestServeNormal(t *testing.T) {
 	conf := NewConfig()
 	ph, ok := CreateProtocolHandler(conf).(*protocolHandler)
 	assert.True(t, ok)
-	trackingID := "b0cbb3b4-aaee-a63a-49ae-0d5a31af9c93"
 
 	// for the non-continued requests
 	hh := &testHTTPHandler{}
@@ -156,14 +178,14 @@ func TestServeNormal(t *testing.T) {
 		if !testMessageIsRequest[i] {
 			continue
 		}
-		ph.serve(hh, "/service", trackingID, 1, []byte(tmsgstr), nil, nil)
+		ph.serve(hh, "/service", testTrackingID, 1, []byte(tmsgstr), nil, nil)
 		count++
 		mmap := testMessageMaps[i]
 
 		assert.Equal(t, mmap["method"].(string), hh.req.Method)
 		assert.True(t, strings.HasPrefix(hh.req.RequestURI, "/service"))
 		assert.Equal(t, mmap["path"].(string), hh.req.RequestURI[8:])
-		assert.Equal(t, buildRequestKey(trackingID, mmap["id"].(string)), GetRequestKey(hh.req))
+		assert.Equal(t, buildRequestKey(testTrackingID, mmap["id"].(string)), GetRequestKey(hh.req))
 
 		hhresp, ok := hh.resp.(*response)
 		assert.True(t, ok)
@@ -176,20 +198,19 @@ func TestServeContinued(t *testing.T) {
 	conf := NewConfig()
 	ph, ok := CreateProtocolHandler(conf).(*protocolHandler)
 	assert.True(t, ok)
-	trackingID := "b0cbb3b4-aaee-a63a-49ae-0d5a31af9c93"
 
 	// for the continued requests
 	done := make(chan struct{})
 	hh := &testHTTPHandler{done: done}
 	for i, tmsgstr := range testContinuedMessageStrings {
-		ph.serve(hh, "/service", trackingID, 1, []byte(tmsgstr), nil, nil)
+		ph.serve(hh, "/service", testTrackingID, 1, []byte(tmsgstr), nil, nil)
 		// the handler will be only invoked once after the first segment is served
 		assert.Equal(t, 1, hh.served)
 		if i == 0 {
 			assert.Equal(t, testContinuedMessageMap["method"].(string), hh.req.Method)
 			assert.True(t, strings.HasPrefix(hh.req.RequestURI, "/service"))
 			assert.Equal(t, testContinuedMessageMap["path"].(string), hh.req.RequestURI[8:])
-			assert.Equal(t, buildRequestKey(trackingID, testContinuedMessageMap["id"].(string)), GetRequestKey(hh.req))
+			assert.Equal(t, buildRequestKey(testTrackingID, testContinuedMessageMap["id"].(string)), GetRequestKey(hh.req))
 		}
 	}
 	select {
@@ -339,4 +360,22 @@ func (h *testHTTPHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			}
 		}
 	}
+}
+
+type testConnectionWriter struct {
+	data bytes.Buffer
+}
+
+func (w *testConnectionWriter) WriteMessage(messageType int, data []byte) error {
+	w.data.Write(data)
+	return nil
+}
+func (w *testConnectionWriter) WriteJSON(v interface{}) error {
+	var b []byte
+	var err error
+	if b, err = json.Marshal(v); err == nil {
+		w.data.Write(b)
+		return nil
+	}
+	return err
 }

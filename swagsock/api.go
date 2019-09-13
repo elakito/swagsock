@@ -61,3 +61,15 @@ type Config struct {
 	Heartbeat        int
 	Log              Logger
 }
+
+// HandshakeRequest is the handshake request message that is sent from the client
+type HandshakeRequest struct {
+	Version string `json:"version"`
+}
+
+// HandshakeResponse is the handshake response message that is sent from the server
+type HandshakeResponse struct {
+	Version    string `json:"version"`
+	TrackingID string `json:"trackingID,omitempty"`
+	Error      string `json:"error,omitempty"`
+}

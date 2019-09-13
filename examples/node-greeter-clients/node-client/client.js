@@ -22,6 +22,7 @@
 "use strict";
 
 const HOST_URL = 'http://localhost:8091/samples/greeter';
+const PROTOCOL_VERSION = "2.0";
 
 var hosturl = HOST_URL;
 var authuser
@@ -323,6 +324,7 @@ function connect() {
     subSocket.on('open', function open() {
         isopen = true;
         console.log('Connected using websocket');
+        subSocket.send(JSON.stringify({ "version": PROTOCOL_VERSION}));
         prompt.setPrompt(userprompt, 2);
         prompt.prompt();
     });
@@ -341,14 +343,22 @@ function connect() {
             console.log('Invalid response: ', message);
             return;
         }
-        if (json.heartbeat) {
-            // ignore
+        if (json.version) {
+            if (trace) {
+                console.log("TRACE: received " + message);
+                prompt.setPrompt(userprompt, 2);
+                prompt.prompt();
+            }
+            if (json.error) {
+                console.log("Error:" + json.error);
+                doQuit();
+            }
         } else {
             if (trace) {
                 console.log("TRACE: received " + message);
                         prompt.setPrompt(userprompt, 2);
                         prompt.prompt();
-                    }
+            }
 
             if (json.error_code) {
                 console.log(jpart);

@@ -1,7 +1,7 @@
 {
   "name": "greeterSwagsockDemo",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "dependencies": {
-    "swagsock.js": "^0.0.1"
+    "swagsock.js": "^0.0.2"
   }
 }

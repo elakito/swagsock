@@ -102,26 +102,43 @@ func (t *wstransport) connect() error {
 		return err
 	}
 	t.conn = c
+	if err := t.conn.WriteJSON(&swagsock.HandshakeRequest{Version: swagsock.ProtocolVersion}); err != nil {
+		return err
+	}
 	go func() {
+		var handshaked bool
 		for {
 			_, message, err := t.conn.ReadMessage()
 			if err == nil {
-				headers, body, err := t.codec.DecodeSwaggerSocketMessage(message)
-				if err == nil {
-					reqid := headers["id"].(string)
+				if handshaked {
+					headers, body, err := t.codec.DecodeSwaggerSocketMessage(message)
+					if err == nil {
+						reqid := headers["id"].(string)
 
-					// only handle if there is a pending request
-					if fresp := t.removeFutureResponse(reqid); fresp != nil {
-						delete(t.pending, reqid)
-						res := &response{code: headers["code"].(int), id: reqid}
-						if mediaType, found := headers["type"].(string); found {
-							res.mediaType = mediaType
+						// only handle if there is a pending request
+						if fresp := t.removeFutureResponse(reqid); fresp != nil {
+							delete(t.pending, reqid)
+							res := &response{code: headers["code"].(int), id: reqid}
+							if mediaType, found := headers["type"].(string); found {
+								res.mediaType = mediaType
+							}
+							if len(body) > 0 {
+								res.body = ioutil.NopCloser(bytes.NewBuffer(body))
+							}
+							fresp.set(res)
 						}
-						if len(body) > 0 {
-							res.body = ioutil.NopCloser(bytes.NewBuffer(body))
-						}
-						fresp.set(res)
 					}
+				} else {
+					var hr *swagsock.HandshakeResponse
+					if err := json.Unmarshal(message, &hr); err != nil {
+						log.Println("Error invalid handshake:", err)
+						return
+					}
+					if hr.Error != "" {
+						log.Println("Error handshake:", hr.Error)
+						return
+					}
+					handshaked = true
 				}
 			} else {
 				log.Println("Error read:", err)

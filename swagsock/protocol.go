@@ -3,6 +3,7 @@ package swagsock
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -23,12 +24,17 @@ import (
 const (
 	// Revisit the Name of this internal header that represents the tracking-id and request-id pair
 	headerRequestKey = "X-Request-Key"
+	// ProtocolVersion specifies the current protocol version
+	ProtocolVersion = "2.0"
 )
 
 var (
 	// knownTrackingIDs lists the known tracking-id query parameters used in the websocket upgrade request
 	knownTrackingIDs = []string{"x-tracking-id", "X-Atmosphere-tracking-id"}
 	defaultLogger    = log.New(ioutil.Discard, "[swagsocket] ", log.LstdFlags)
+
+	//Revisit defining known errors
+	errVersionMismatch = errors.New("version_mismatch")
 )
 
 var websocketUpgrader = websocket.Upgrader{
@@ -147,19 +153,27 @@ func (ph *protocolHandler) Serve(handler http.Handler, w http.ResponseWriter, r 
 		}()
 	}
 
-	go func() {
+	var handshaked bool
+	go func(tid string) {
 		for {
 			mt, p, err := conn.ReadMessage()
 			if err != nil {
 				conn.Close()
 				break
 			}
-			ph.serve(handler, baseURI, trackingID, mt, p, conn, connlock)
+			if handshaked {
+				ph.serve(handler, baseURI, trackingID, mt, p, conn, connlock)
+			} else if err := ph.handshake(p, trackingID, conn); err != nil {
+				conn.Close()
+				break
+			} else {
+				handshaked = true
+			}
 		}
 		if heartbeatstop != nil {
 			heartbeatstop <- struct{}{}
 		}
-	}()
+	}(trackingID)
 
 }
 
@@ -171,7 +185,25 @@ func (ph *protocolHandler) Destroy() {
 	}
 }
 
-func (ph *protocolHandler) serve(handler http.Handler, baseURI string, trackingID string, mtype int, p []byte, conn *websocket.Conn, connlock *sync.Mutex) {
+type connectionWriter interface {
+	WriteMessage(messageType int, data []byte) error
+	WriteJSON(v interface{}) error
+}
+
+func (ph *protocolHandler) handshake(p []byte, trackingID string, conn connectionWriter) error {
+	var hr *HandshakeRequest
+	if err := json.Unmarshal(p, &hr); err != nil {
+		return err
+	}
+	if hr.Version != ProtocolVersion {
+		conn.WriteJSON(&HandshakeResponse{Version: ProtocolVersion, Error: "version_mismatch"})
+		return errVersionMismatch
+	}
+	conn.WriteJSON(&HandshakeResponse{Version: ProtocolVersion, TrackingID: trackingID})
+	return nil
+}
+
+func (ph *protocolHandler) serve(handler http.Handler, baseURI string, trackingID string, mtype int, p []byte, conn connectionWriter, connlock *sync.Mutex) {
 	headers, body, err := ph.codec.DecodeSwaggerSocketMessage(p)
 	if err != nil {
 		ph.log.Printf("Error %s at decoding swaggersocket message. Skipping it", err.Error())
@@ -410,7 +442,7 @@ func needsChunkEnabled(body io.Reader) bool {
 	}
 }
 
-func newHTTPResponse(id string, messageType int, conn *websocket.Conn, connlock *sync.Mutex, codec Codec) http.ResponseWriter {
+func newHTTPResponse(id string, messageType int, conn connectionWriter, connlock *sync.Mutex, codec Codec) http.ResponseWriter {
 	resp := &response{id: id, messageType: messageType, headers: make(http.Header), conn: conn, connlock: connlock, codec: codec}
 	return resp
 }
@@ -419,7 +451,7 @@ type response struct {
 	id          string
 	headers     http.Header
 	code        int
-	conn        *websocket.Conn
+	conn        connectionWriter
 	messageType int
 	codec       Codec
 	connlock    *sync.Mutex

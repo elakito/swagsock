@@ -17,6 +17,7 @@
 "use strict";
 
 const HOST_URL = 'http://localhost:8091/samples/greeter';
+const PROTOCOL_VERSION = "2.0";
 
 var trace = false;
 
@@ -267,15 +268,21 @@ function doQuit() {
 
 
 request.onOpen = function(response) {
+    // workaround of onOpen being invoked twice when some data is pushed from this method
+    if (isopen) return;
     isopen = true;
     console.log('Connected using ' + response.transport);
+    subSocket.push(JSON.stringify({ "version": PROTOCOL_VERSION}));
     prompt.setPrompt(userprompt, 2);
     prompt.prompt();
 };
 
 request.onReopen = function(response) {
+    // workaround of onOpen being invoked twice when some data is pushed from this method
+    if (isopen) return;
     isopen = true;
     console.log('Reopened using ' + response.transport);
+    subSocket.push(JSON.stringify({ "version": PROTOCOL_VERSION}));
     prompt.setPrompt(userprompt, 2);
     prompt.prompt();
 }
@@ -299,8 +306,16 @@ request.onMessage = function (response) {
         console.log('Invalid response: ', message);
         return;
     }
-    if (json.heartbeat) {
-        // ignore
+    if (json.version) {
+        if (trace) {
+            console.log("TRACE: received " + message);
+            prompt.setPrompt(userprompt, 2);
+            prompt.prompt();
+        }
+        if (json.error) {
+            console.log("Error:" + json.error);
+            doQuit();
+        }
     } else {
         if (trace) {
             console.log("TRACE: received " + message);
