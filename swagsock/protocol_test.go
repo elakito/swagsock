@@ -2,9 +2,11 @@ package swagsock
 
 import (
 	"bytes"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-openapi/runtime"
 
@@ -49,6 +51,30 @@ var (
 		true,
 		false,
 	}
+
+	testContinuedMessageStrings = []string{
+		`{"id": "129", "method": "POST",
+			"path": "/topics/bigtopic",
+			"type": "application/vnd.kafka.binary.v1+json", "continue": true}{"recor`,
+		`{"id": "129", "method": "POST",
+			"path": "/topics/bigtopic",
+			"type": "application/vnd.kafka.binary.v1+json", "continue": true}ds":[{"va`,
+		`{"id": "129", "method": "POST",
+			"path": "/topics/bigtopic",
+			"type": "application/vnd.kafka.binary.v1+json", "continue": true}lue":"S2Fma`,
+		`{"id": "129", "method": "POST",
+			"path": "/topics/bigtopic",
+			"type": "application/vnd.kafka.binary.v1+json"}2E="}]}`,
+	}
+
+	testContinuedMessageMap = map[string]interface{}{
+		"id":     "129",
+		"method": "POST",
+		"path":   "/topics/bigtopic",
+		"type":   "application/vnd.kafka.binary.v1+json",
+	}
+
+	testContinuedMessageBody = `{"records":[{"value":"S2Fma2E="}]}`
 )
 
 func TestDefaultCodecEncode(t *testing.T) {
@@ -76,6 +102,15 @@ func TestDefaultCodecDecode(t *testing.T) {
 	}
 }
 
+func TestCreateDefaultProtocolHandler(t *testing.T) {
+	conf := NewConfig()
+	ph, ok := CreateProtocolHandler(conf).(*protocolHandler)
+	assert.True(t, ok)
+	assert.NotNil(t, ph.codec)
+	assert.NotNil(t, ph.continued)
+	assert.NotNil(t, ph.mediator)
+}
+
 func TestBuildHeaders(t *testing.T) {
 	resp := &response{id: "513", code: 200, headers: make(http.Header)}
 	assert.Equal(t, map[string]interface{}{
@@ -97,13 +132,71 @@ func TestNewHTTPRequest(t *testing.T) {
 		if !testMessageIsRequest[i] {
 			continue
 		}
-
-		id, req := newHTTPRequest("/test", "default", []byte(tmsgstr), codec)
+		headers, body, _ := codec.DecodeSwaggerSocketMessage([]byte(tmsgstr))
+		rid := getStringHeader(headers, "id")
+		req := newHTTPRequest("/test", "default", rid, headers, bytes.NewReader(body))
 		mmap := testMessageMaps[i]
 		assert.Equal(t, mmap["method"].(string), req.Method)
 		assert.True(t, strings.HasPrefix(req.RequestURI, "/test"))
 		assert.Equal(t, mmap["path"].(string), req.RequestURI[5:])
-		assert.Equal(t, buildRequestKey("default", id), GetRequestKey(req))
+		assert.Equal(t, buildRequestKey("default", rid), GetRequestKey(req))
+	}
+}
+
+func TestServeNormal(t *testing.T) {
+	conf := NewConfig()
+	ph, ok := CreateProtocolHandler(conf).(*protocolHandler)
+	assert.True(t, ok)
+	trackingID := "b0cbb3b4-aaee-a63a-49ae-0d5a31af9c93"
+
+	// for the non-continued requests
+	hh := &testHTTPHandler{}
+	count := 0
+	for i, tmsgstr := range testMessageStrings {
+		if !testMessageIsRequest[i] {
+			continue
+		}
+		ph.serve(hh, "/service", trackingID, 1, []byte(tmsgstr), nil, nil)
+		count++
+		mmap := testMessageMaps[i]
+
+		assert.Equal(t, mmap["method"].(string), hh.req.Method)
+		assert.True(t, strings.HasPrefix(hh.req.RequestURI, "/service"))
+		assert.Equal(t, mmap["path"].(string), hh.req.RequestURI[8:])
+		assert.Equal(t, buildRequestKey(trackingID, mmap["id"].(string)), GetRequestKey(hh.req))
+
+		hhresp, ok := hh.resp.(*response)
+		assert.True(t, ok)
+		assert.Equal(t, mmap["id"].(string), hhresp.id)
+	}
+	assert.Equal(t, count, hh.served)
+}
+
+func TestServeContinued(t *testing.T) {
+	conf := NewConfig()
+	ph, ok := CreateProtocolHandler(conf).(*protocolHandler)
+	assert.True(t, ok)
+	trackingID := "b0cbb3b4-aaee-a63a-49ae-0d5a31af9c93"
+
+	// for the continued requests
+	done := make(chan struct{})
+	hh := &testHTTPHandler{done: done}
+	for i, tmsgstr := range testContinuedMessageStrings {
+		ph.serve(hh, "/service", trackingID, 1, []byte(tmsgstr), nil, nil)
+		// the handler will be only invoked once after the first segment is served
+		assert.Equal(t, 1, hh.served)
+		if i == 0 {
+			assert.Equal(t, testContinuedMessageMap["method"].(string), hh.req.Method)
+			assert.True(t, strings.HasPrefix(hh.req.RequestURI, "/service"))
+			assert.Equal(t, testContinuedMessageMap["path"].(string), hh.req.RequestURI[8:])
+			assert.Equal(t, buildRequestKey(trackingID, testContinuedMessageMap["id"].(string)), GetRequestKey(hh.req))
+		}
+	}
+	select {
+	case <-done:
+		assert.Equal(t, testContinuedMessageBody, hh.body.String())
+	case <-time.After(2 * time.Second):
+		assert.Fail(t, "timeout unexpected")
 	}
 }
 
@@ -218,4 +311,32 @@ func (w *testWriter) Write(b []byte) (int, error) {
 	return w.buf.Write(b)
 }
 func (w *testWriter) WriteHeader(statusCode int) {
+}
+
+type testHTTPHandler struct {
+	req    *http.Request
+	resp   http.ResponseWriter
+	body   bytes.Buffer
+	served int
+	done   chan struct{}
+}
+
+func (h *testHTTPHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	h.req = req
+	h.resp = resp
+	h.body.Reset()
+	h.served++
+	if h.req.Body != nil {
+		b := make([]byte, 64)
+		for {
+			if n, err := h.req.Body.Read(b); err == io.EOF {
+				if h.done != nil {
+					h.done <- struct{}{}
+				}
+				break
+			} else {
+				h.body.Write(b[0:n])
+			}
+		}
+	}
 }

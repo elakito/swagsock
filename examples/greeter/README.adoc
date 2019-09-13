@@ -26,9 +26,14 @@ The last two operations take advantage of Websocket and the subscribed client ca
 
 
 ===== Run
-To start this server at http port 8091 and https port 8495, run
+To start this server at http port 8091, run
 ----
-$ go run cmd/greeter-demo-server/main.go --port 8091 --tls-port 8495 --tls-certificate certs/localhost.crt --tls-key certs/localhost.key
+$ go run cmd/greeter-demo-server/main.go --scheme http --port 8091
+----
+
+Or to start this server at https port 8495, run
+----
+$ go run cmd/greeter-demo-server/main.go --scheme https --tls-port 8495 --tls-certificate certs/localhost.crt --tls-key certs/localhost.key
 ----
 
 .Console

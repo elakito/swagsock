@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -89,13 +90,14 @@ func NewConfig() *Config {
 // CreateProtocolHandler creates a new ProtocolHandler with the specified codec. If codec is nil, the defaultCodec is used
 func CreateProtocolHandler(conf *Config) ProtocolHandler {
 	return &protocolHandler{
-		codec: conf.Codec, mediator: conf.ResponseMediator, heartbeat: conf.Heartbeat, log: conf.Log, connections: make(map[*websocket.Conn]string)}
+		codec: conf.Codec, mediator: conf.ResponseMediator, heartbeat: conf.Heartbeat, log: conf.Log, connections: make(map[*websocket.Conn]string), continued: make(map[string]io.WriteCloser)}
 }
 
 type protocolHandler struct {
 	codec       Codec
 	connections map[*websocket.Conn]string
 	mediator    ResponseMediator
+	continued   map[string]io.WriteCloser // temporary
 	heartbeat   int
 	log         Logger
 	sync.RWMutex
@@ -152,9 +154,7 @@ func (ph *protocolHandler) Serve(handler http.Handler, w http.ResponseWriter, r 
 				conn.Close()
 				break
 			}
-			id, req := newHTTPRequest(baseURI, trackingID, p, ph.codec)
-			resp := newHTTPResponse(id, mt, conn, connlock, ph.codec)
-			handler.ServeHTTP(resp, req)
+			ph.serve(handler, baseURI, trackingID, mt, p, conn, connlock)
 		}
 		if heartbeatstop != nil {
 			heartbeatstop <- struct{}{}
@@ -168,6 +168,41 @@ func (ph *protocolHandler) Destroy() {
 	defer ph.RUnlock()
 	for con := range ph.connections {
 		con.Close()
+	}
+}
+
+func (ph *protocolHandler) serve(handler http.Handler, baseURI string, trackingID string, mtype int, p []byte, conn *websocket.Conn, connlock *sync.Mutex) {
+	headers, body, err := ph.codec.DecodeSwaggerSocketMessage(p)
+	if err != nil {
+		ph.log.Printf("Error %s at decoding swaggersocket message. Skipping it", err.Error())
+		return
+	}
+
+	cont := getBoolHeader(headers, "continue")
+	rid := getStringHeader(headers, "id")
+	if cwriter, ok := ph.continued[rid]; !ok && cont {
+		// for the first segment of a new continued series, dispatch it asynchronously to the handler and write the data to its writer
+		creader, cwriter := io.Pipe()
+		ph.continued[rid] = cwriter
+		go func() {
+			req := newHTTPRequest(baseURI, trackingID, rid, headers, creader)
+			resp := newHTTPResponse(rid, mtype, conn, connlock, ph.codec)
+			handler.ServeHTTP(resp, req)
+		}()
+		cwriter.Write(body)
+	} else if ok {
+		// for one of the subsequent segments of a continued series, write the data to its writer
+		cwriter.Write(body)
+		if !cont {
+			// delete the cwriter
+			cwriter.Close()
+			delete(ph.continued, rid)
+		}
+	} else {
+		// for a non-continued single request, dispatch it the handler
+		req := newHTTPRequest(baseURI, trackingID, rid, headers, bytes.NewReader(body))
+		resp := newHTTPResponse(rid, mtype, conn, connlock, ph.codec)
+		handler.ServeHTTP(resp, req)
 	}
 }
 
@@ -348,24 +383,31 @@ func (m *defaultResponseMediator) writeTopic(topic string, data []byte) {
 	}
 }
 
-func newHTTPRequest(baseURI string, trackingID string, data []byte, codec Codec) (string, *http.Request) {
-	headers, body, err := codec.DecodeSwaggerSocketMessage(data)
-	if err != nil {
-		//TODO return the error
-	}
-	uri := fmt.Sprintf("%s%s", baseURI, getHeader(headers, "path"))
-	req, _ := http.NewRequest(getHeader(headers, "method"), uri, bytes.NewReader(body))
-	rid := getHeader(headers, "id")
+func newHTTPRequest(baseURI string, trackingID string, rid string, headers map[string]interface{}, body io.Reader) *http.Request {
+	uri := fmt.Sprintf("%s%s", baseURI, getStringHeader(headers, "path"))
+	req, _ := http.NewRequest(getStringHeader(headers, "method"), uri, body)
 	req.RequestURI = uri
 	req.Header.Add(headerRequestKey, buildRequestKey(trackingID, rid))
 	copyHeaderToHTTPHeaders(headers, "type", req.Header, "Content-Type")
 	copyHeaderToHTTPHeaders(headers, "accept", req.Header, "Accept")
+	if needsChunkEnabled(body) {
+		req.TransferEncoding = append(req.TransferEncoding, "chunked")
+	}
 	if aheaders, ok := headers["headers"].(map[string]interface{}); ok {
 		for aheader, avalue := range aheaders {
 			req.Header.Add(aheader, avalue.(string))
 		}
 	}
-	return rid, req
+	return req
+}
+
+func needsChunkEnabled(body io.Reader) bool {
+	switch body.(type) {
+	case *bytes.Buffer, *bytes.Reader, *strings.Reader:
+		return false
+	default:
+		return true
+	}
 }
 
 func newHTTPResponse(id string, messageType int, conn *websocket.Conn, connlock *sync.Mutex, codec Codec) http.ResponseWriter {
@@ -415,12 +457,20 @@ func (r *response) buildHeaders() map[string]interface{} {
 	return headers
 }
 
-func getHeader(headers map[string]interface{}, key string) string {
+func getStringHeader(headers map[string]interface{}, key string) string {
 	// we know that the value is of string if present
 	if v, ok := headers[key]; ok {
 		return v.(string)
 	}
 	return ""
+}
+
+func getBoolHeader(headers map[string]interface{}, key string) bool {
+	// we know that the value is of string if present
+	if v, ok := headers[key]; ok {
+		return v.(bool)
+	}
+	return false
 }
 
 func copyHeaderToHTTPHeaders(src map[string]interface{}, srckey string, target http.Header, targetkey string) {
