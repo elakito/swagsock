@@ -149,9 +149,7 @@ paths:
         200:
           description: "Returns an empty or a sequence of greeting events"
           schema:
-            type: "array"
-            items:
-              $ref: "#/definitions/greetingReply"
+            $ref: "#/definitions/greetingReply"
   /v1/unsubscribe/{sid}:
     delete:
       summary: "Unsubscribe from the greeting events"

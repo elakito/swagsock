@@ -79,7 +79,7 @@ func configureAPI(api *operations.ChatDemoAPI) http.Handler {
 		hb, _ := hello.MarshalBinary()
 		bye := &models.Message{Name: params.Name, Type: "left"}
 		bb, _ := bye.MarshalBinary()
-		responder := responseMediator.Subscribe(swagsock.GetRequestKey(params.HTTPRequest), params.Name, operations.NewSubscribeOK(), hb, bb)
+		responder := responseMediator.Subscribe(swagsock.GetRequestKey(params.HTTPRequest), params.Name, operations.NewSubscribeOK().WithPayload(&models.Message{}), hb, bb)
 		return responder
 	})
 	api.UnsubscribeHandler = operations.UnsubscribeHandlerFunc(func(params operations.UnsubscribeParams) middleware.Responder {

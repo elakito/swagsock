@@ -93,12 +93,9 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Subscription information",
+                        "description": "Subscribed chat messages",
                         "schema": {
-                            "items": {
-                                "$ref": "#/definitions/message"
-                            },
-                            "type": "array"
+                            "$ref": "#/definitions/message"
                         }
                     }
                 },

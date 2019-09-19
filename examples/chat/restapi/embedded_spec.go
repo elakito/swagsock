@@ -122,10 +122,7 @@ func init() {
           "200": {
             "description": "Subscription information",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/message"
-              }
+              "$ref": "#/definitions/message"
             }
           }
         }
@@ -306,10 +303,7 @@ func init() {
           "200": {
             "description": "Subscription information",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/message"
-              }
+              "$ref": "#/definitions/message"
             }
           }
         }

@@ -81,10 +81,7 @@
                     "200": {
                         "description": "Subscription information",
                         "schema": {
-                            "items": {
-                                "$ref": "#/definitions/message"
-                            },
-                            "type": "array"
+                            "$ref": "#/definitions/message"
                         }
                     }
                 },

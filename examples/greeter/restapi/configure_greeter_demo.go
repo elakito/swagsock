@@ -111,7 +111,8 @@ func configureAPI(api *operations.GreeterDemoAPI) http.Handler {
 		return operations.NewUploadOK().WithPayload(&models.UploadStatus{Name: params.Name, Size: int32(size)})
 	})
 	api.SubscribeHandler = operations.SubscribeHandlerFunc(func(params operations.SubscribeParams) middleware.Responder {
-		responder := responseMediator.Subscribe(swagsock.GetRequestKey(params.HTTPRequest), params.Name, operations.NewSubscribeOK(), nil, nil)
+		payload := &models.GreetingReply{}
+		responder := responseMediator.Subscribe(swagsock.GetRequestKey(params.HTTPRequest), params.Name, operations.NewSubscribeOK().WithPayload(payload), nil, nil)
 		return responder
 	})
 	api.UnsubscribeHandler = operations.UnsubscribeHandlerFunc(func(params operations.UnsubscribeParams) middleware.Responder {

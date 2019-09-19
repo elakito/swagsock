@@ -164,12 +164,9 @@ func init() {
         ],
         "responses": {
           "200": {
-            "description": "Subscription information",
+            "description": "Subscribed chat messages",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/message"
-              }
+              "$ref": "#/definitions/message"
             }
           }
         }
@@ -396,12 +393,9 @@ func init() {
         ],
         "responses": {
           "200": {
-            "description": "Subscription information",
+            "description": "Subscribed chat messages",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/message"
-              }
+              "$ref": "#/definitions/message"
             }
           }
         }

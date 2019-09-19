@@ -273,6 +273,7 @@ on('line', function(line) {
             swagSocket = swagsock.swaggersocket(hosturl);
             swagSocket.on("open", function() {
                 console.log('Connected using websocket');
+                doHelp();
                 prompt.setPrompt(userprompt, 2);
                 prompt.prompt();
             });
@@ -284,7 +285,7 @@ on('line', function(line) {
             swagSocket.open();
             console.log("Connecting using websocket ...");
         } else if (msg.length == 0) {
-            doHelp();
+//            doHelp();
         } else if (msg.indexOf("ping") == 0) {
             doPing();
         } else if (msg.indexOf("echo") == 0) {

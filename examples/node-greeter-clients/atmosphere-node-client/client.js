@@ -272,6 +272,7 @@ request.onOpen = function(response) {
     if (isopen) return;
     isopen = true;
     console.log('Connected using ' + response.transport);
+    doHelp();
     subSocket.push(JSON.stringify({ "version": PROTOCOL_VERSION}));
     prompt.setPrompt(userprompt, 2);
     prompt.prompt();
@@ -368,7 +369,7 @@ on('line', function(line) {
                 }
             }, 3000);
         } else if (msg.length == 0) {
-            doHelp();
+//            doHelp();
         } else if (msg.indexOf("ping") == 0) {
             doPing();
         } else if (msg.indexOf("echo") == 0) {

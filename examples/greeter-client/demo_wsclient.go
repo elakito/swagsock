@@ -12,8 +12,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-openapi/runtime"
@@ -21,7 +23,6 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/satori/go.uuid"
 
 	apiclient "github.com/elakito/swagsock/examples/greeter-client/client"
 	apioperations "github.com/elakito/swagsock/examples/greeter-client/client/operations"
@@ -48,7 +49,7 @@ func main() {
 	client := newWSClient(transport, strfmt.Default)
 	fmt.Printf("demo_client invoking some operations at target_path %s ...\n", *target_path)
 
-	perform(client)
+	perform(client, true)
 }
 
 /////////
@@ -66,7 +67,7 @@ func newWSClient(transport *wstransport, formats strfmt.Registry) *apiclient.Gre
 }
 
 func newWSTransport(url string) *wstransport {
-	t := &wstransport{url: url, codec: swagsock.NewDefaultCodec(), pending: make(map[string]*futureResponse)}
+	t := &wstransport{url: url, codec: swagsock.NewDefaultCodec(), pending: make(map[string]asyncResponse)}
 
 	t.consumers = map[string]runtime.Consumer{
 		runtime.JSONMime:    runtime.JSONConsumer(),
@@ -92,8 +93,13 @@ type wstransport struct {
 	consumers map[string]runtime.Consumer
 	producers map[string]runtime.Producer
 
-	pending map[string]*futureResponse
+	nextid  int32
+	pending map[string]asyncResponse
 	lock    sync.RWMutex
+}
+
+func (t *wstransport) getNextID() string {
+	return strconv.Itoa(int(atomic.AddInt32(&t.nextid, 1)))
 }
 
 func (t *wstransport) connect() error {
@@ -114,10 +120,8 @@ func (t *wstransport) connect() error {
 					headers, body, err := t.codec.DecodeSwaggerSocketMessage(message)
 					if err == nil {
 						reqid := headers["id"].(string)
-
 						// only handle if there is a pending request
-						if fresp := t.removeFutureResponse(reqid); fresp != nil {
-							delete(t.pending, reqid)
+						if fresp := t.removeAsyncResponse(reqid, false); fresp != nil {
 							res := &response{code: headers["code"].(int), id: reqid}
 							if mediaType, found := headers["type"].(string); found {
 								res.mediaType = mediaType
@@ -150,7 +154,7 @@ func (t *wstransport) connect() error {
 	return nil
 }
 
-func (t *wstransport) Submit(operation *runtime.ClientOperation) (interface{}, error) {
+func (t *wstransport) createRequest(reqid string, operation *runtime.ClientOperation) ([]byte, error) {
 	req := &request{
 		pathPattern: operation.PathPattern,
 		method:      operation.Method,
@@ -164,10 +168,6 @@ func (t *wstransport) Submit(operation *runtime.ClientOperation) (interface{}, e
 	if err := req.writer.WriteToRequest(req, strfmt.Default); err != nil {
 		return nil, err
 	}
-
-	reqid := uuid.NewV4().String()
-	fresp := newFutureReponse(reqid)
-	t.putFutureResponse(reqid, fresp)
 
 	rawpath := req.GetPath()
 	rawquery := req.query.Encode()
@@ -199,11 +199,26 @@ func (t *wstransport) Submit(operation *runtime.ClientOperation) (interface{}, e
 			break
 		}
 	}
+	rawheaders, err := json.Marshal(headers)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(fmt.Sprintf(`%s%s`, rawheaders, body)), nil
+}
 
-	rawheaders, _ := json.Marshal(headers)
-	rawmessage := fmt.Sprintf(`%s%s`, rawheaders, body)
-	t.writeMessage([]byte(rawmessage))
+func (t *wstransport) Submit(operation *runtime.ClientOperation) (interface{}, error) {
+	reqid := t.getNextID()
+	rawmessage, err := t.createRequest(reqid, operation)
+	if err != nil {
+		return nil, err
+	}
 
+	fresp := newFutureResponse(reqid)
+	t.putAsyncResponse(reqid, fresp)
+
+	t.writeMessage(rawmessage)
+
+	// TODO make the timeout for the synchronous response configurable
 	response, err := fresp.Get(5 * time.Second)
 	if err != nil {
 		return nil, err
@@ -216,18 +231,45 @@ func (t *wstransport) Submit(operation *runtime.ClientOperation) (interface{}, e
 	return operation.Reader.ReadResponse(response, cons)
 }
 
-func (t *wstransport) putFutureResponse(reqid string, fresp *futureResponse) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-	t.pending[reqid] = fresp
+func (t *wstransport) SubmitAsync(operation *runtime.ClientOperation, cb func(string, interface{}), sao swagsock.SubmitAsyncOption) (string, error) {
+	reqid := t.getNextID()
+	rawmessage, err := t.createRequest(reqid, operation)
+	if err != nil {
+		return "", err
+	}
+
+	if sao.Is(swagsock.SubmitAsyncModeUnsubscribe) {
+		t.removeAsyncResponse(sao.Param(), true)
+	}
+	fresp := newCallbackResponse(reqid, func(r *response) {
+		if cons, ok := t.consumers[r.mediaType]; ok {
+			if resp, err := operation.Reader.ReadResponse(r, cons); err == nil {
+				cb(reqid, resp)
+			} else {
+				// write warning log
+			}
+		}
+	}, sao.Is(swagsock.SubmitAsyncModeSubscribe))
+	t.putAsyncResponse(reqid, fresp)
+
+	t.writeMessage(rawmessage)
+	return reqid, nil
 }
 
-func (t *wstransport) removeFutureResponse(reqid string) *futureResponse {
+func (t *wstransport) putAsyncResponse(reqid string, aresp asyncResponse) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	if fresp, found := t.pending[reqid]; found {
-		delete(t.pending, reqid)
-		return fresp
+	t.pending[reqid] = aresp
+}
+
+func (t *wstransport) removeAsyncResponse(reqid string, force bool) asyncResponse {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	if aresp, found := t.pending[reqid]; found {
+		if !aresp.isSticky() || force {
+			delete(t.pending, reqid)
+		}
+		return aresp
 	}
 	return nil
 }
@@ -271,8 +313,16 @@ func (r response) Body() io.ReadCloser {
 	return r.body
 }
 
-func newFutureReponse(id string) *futureResponse {
+type asyncResponse interface {
+	set(r *response)
+	isSticky() bool
+}
+
+func newFutureResponse(id string) *futureResponse {
 	return &futureResponse{id: id, received: make(chan struct{}, 1)}
+}
+func newCallbackResponse(id string, cb func(*response), sticky bool) *callbackResponse {
+	return &callbackResponse{id: id, cb: cb, sticky: sticky}
 }
 
 type futureResponse struct {
@@ -289,10 +339,25 @@ func (m *futureResponse) Get(timeout time.Duration) (*response, error) {
 	}
 	return m.resp, nil
 }
-
+func (m *futureResponse) isSticky() bool {
+	return false
+}
 func (m *futureResponse) set(r *response) {
 	m.resp = r
 	close(m.received)
+}
+
+type callbackResponse struct {
+	id     string
+	cb     func(*response)
+	sticky bool
+}
+
+func (m *callbackResponse) set(r *response) {
+	m.cb(r)
+}
+func (m *callbackResponse) isSticky() bool {
+	return m.sticky
 }
 
 // a copy of the package private runtime.request (used now until figuring out how everything can be integrated)

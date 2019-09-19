@@ -26,5 +26,5 @@ func main() {
 	client := apiclient.New(transport, strfmt.Default)
 	fmt.Printf("demo_client invoking some operations at target_path %s ...\n", *target_path)
 
-	perform(client)
+	perform(client, false)
 }

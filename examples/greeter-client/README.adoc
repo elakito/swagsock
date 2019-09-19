@@ -10,49 +10,131 @@ The client side code has been generated from the included https://raw.githubuser
 $ swagger generate client -f swagger.yaml -A greeter-demo
 ----
 
-
 ===== Run
 
 Make sure the greeter server is started (refer to https://github.com/elakito/swagsock/tree/master/examples/greeter)
+
 
 To run the http client demo, run
 ----
 $ go run demo_client.go demo_common.go
 ----
 
-To run the websocket client demo, run
+To run the swaggersocket client demo, run
 ----
 $ go run demo_wsclient.go demo_common.go
 ----
+
+The swaggersocket client invokes the operations asynchronously and supports publish-subscribe operations.
 
 .Console
 ----
 $ go run demo_client.go demo_common.go
 demo_client invoking some operations at target_path http://localhost:8091/samples/greeter ...
-Ping-Response: {"pong":2}
-Echo-Response: {"echo":"hi"}
-Greet-Response: {"from":"foo","name":"bar","text":"hola"}
-GetGreetStatus-Response: {"count":2,"name":"bar"}
-GetGreetSummary-Response: {"greeted":["bar"],"total":2}
+Choose user ...
+user: foo
+foo> help
+Available commands
+ping                Ping
+echo                Echo the message
+greet               Greet the person
+status              Display the greeting status
+summary             Display the greeting summary
+help                Display this help message
+quit                Quit the application
+foo> ping
+res*: {"pong":1}
+foo> echo hi
+res*: {"echo":"hi"}
+foo> greet bar hello
+res*: {"from":"foo","name":"bar","text":"hello"}
+foo> status 
+res*: {"count":1,"name":"foo"}
+foo> summary
+res*: {"greeted":["foo"],"total":1}
+foo> 
+
 $ go run demo_client.go demo_common.go
 demo_client invoking some operations at target_path http://localhost:8091/samples/greeter ...
-Ping-Response: {"pong":3}
-Echo-Response: {"echo":"hi"}
-Greet-Response: {"from":"foo","name":"bar","text":"hola"}
-GetGreetStatus-Response: {"count":3,"name":"bar"}
-GetGreetSummary-Response: {"greeted":["bar"],"total":3}
+$ go run demo_client.go demo_common.go
+demo_client invoking some operations at target_path http://localhost:8091/samples/greeter ...
+Choose user ...
+user: bar
+bar> ping
+res*: {"pong":4}
+bar> greet foo how are you?
+res*: {"from":"bar","name":"foo","text":"how are you?"}
+bar> 
+
+
 $ go run demo_wsclient.go demo_common.go
 demo_client invoking some operations at target_path ws://localhost:8091/samples/greeter ...
-Ping-Response: {"pong":4}
-Echo-Response: {"echo":"hi"}
-Greet-Response: {"from":"foo","name":"bar","text":"hola"}
-GetGreetStatus-Response: {"count":4,"name":"bar"}
-GetGreetSummary-Response: {"greeted":["bar"],"total":4}
+Choose user ...
+user: foo
+foo> help
+Available commands
+ping                Ping
+ping_a              Ping in async-mode
+echo                Echo the message
+echo_a              Echo the message in async-mode
+greet               Greet the person
+greet_a             Greet the person in async-mode
+status              Display the greeting status
+status_a            Display the greeting status in async-mode
+summary             Display the greeting summary
+summary_a           Display the greeting summary in async-mode
+subscribe_a         Subscribe to the greeting events in async-mode
+unsubscribe_a       Unsubscribe from the greeting events in async-mode
+help                Display this help message
+quit                Quit the application
+foo> ping
+res*: {"pong":5}
+foo> ping_a
+foo> 
+res2: {"pong":6}
+foo> echo_a hola
+foo> 
+res3: {"echo":"hola"}
+foo> subscribe_a
+foo> 
+res4: {}
+foo> 
+res4: {"from":"bar","name":"foo","text":"hola!"}
+foo> greet bar hola!
+res*: {"from":"foo","name":"bar","text":"hola!"}
+foo> 
+res4: {"from":"bar","name":"foo","text":"buenos dias"}
+foo> greet * adios
+
+res4: {"from":"foo","name":"*","text":"adios"}
+foo> res*: {"from":"foo","name":"*","text":"adios"}
+foo> unsubscribe_a 4
+
+res7: {"greeted":["foo","bar"],"total":6}
+foo> 
+
 $ go run demo_wsclient.go demo_common.go
 demo_client invoking some operations at target_path ws://localhost:8091/samples/greeter ...
-Ping-Response: {"pong":5}
-Echo-Response: {"echo":"hi"}
-Greet-Response: {"from":"foo","name":"bar","text":"hola"}
-GetGreetStatus-Response: {"count":5,"name":"bar"}
-GetGreetSummary-Response: {"greeted":["bar"],"total":5}
+Choose user ...
+user: bar
+bar> ping_a
+bar> 
+res1: {"pong":7}
+bar> subscribe_a
+bar> 
+res2: {}
+bar> greet foo hola!
+res*: {"from":"bar","name":"foo","text":"hola!"}
+bar> 
+res2: {"from":"foo","name":"bar","text":"hola!"}
+bar> greet_a foo buenos dias
+bar> 
+res4: {"from":"bar","name":"foo","text":"buenos dias"}
+bar> 
+res2: {"from":"foo","name":"*","text":"adios"}
+bar> greet_a foo hola
+bar> 
+res5: {"from":"bar","name":"foo","text":"hola"}
+bar> 
+
 ----

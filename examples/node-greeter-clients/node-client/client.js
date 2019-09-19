@@ -324,6 +324,7 @@ function connect() {
     subSocket.on('open', function open() {
         isopen = true;
         console.log('Connected using websocket');
+        doHelp();
         subSocket.send(JSON.stringify({ "version": PROTOCOL_VERSION}));
         prompt.setPrompt(userprompt, 2);
         prompt.prompt();
@@ -403,7 +404,7 @@ on('line', function(line) {
             setInterval(keepConnection, 5000);
             console.log("Connecting using websocket ...");
         } else if (msg.length == 0) {
-            doHelp();
+//            doHelp();
         } else if (msg.indexOf("ping") == 0) {
             doPing();
         } else if (msg.indexOf("echo") == 0) {

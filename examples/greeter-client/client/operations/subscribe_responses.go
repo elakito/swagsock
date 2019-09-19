@@ -47,7 +47,7 @@ func NewSubscribeOK() *SubscribeOK {
 Returns an empty or a sequence of greeting events
 */
 type SubscribeOK struct {
-	Payload []*models.GreetingReply
+	Payload *models.GreetingReply
 }
 
 func (o *SubscribeOK) Error() string {
@@ -56,8 +56,10 @@ func (o *SubscribeOK) Error() string {
 
 func (o *SubscribeOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.GreetingReply)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && err != io.EOF {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
 		return err
 	}
 

@@ -16,7 +16,7 @@ import (
 // SubscribeOKCode is the HTTP code returned for type SubscribeOK
 const SubscribeOKCode int = 200
 
-/*SubscribeOK Subscription information
+/*SubscribeOK Subscribed chat messages
 
 swagger:response subscribeOK
 */
@@ -25,7 +25,7 @@ type SubscribeOK struct {
 	/*
 	  In: Body
 	*/
-	Payload []*models.Message `json:"body,omitempty"`
+	Payload *models.Message `json:"body,omitempty"`
 }
 
 // NewSubscribeOK creates SubscribeOK with default headers values
@@ -35,13 +35,13 @@ func NewSubscribeOK() *SubscribeOK {
 }
 
 // WithPayload adds the payload to the subscribe o k response
-func (o *SubscribeOK) WithPayload(payload []*models.Message) *SubscribeOK {
+func (o *SubscribeOK) WithPayload(payload *models.Message) *SubscribeOK {
 	o.Payload = payload
 	return o
 }
 
 // SetPayload sets the payload to the subscribe o k response
-func (o *SubscribeOK) SetPayload(payload []*models.Message) {
+func (o *SubscribeOK) SetPayload(payload *models.Message) {
 	o.Payload = payload
 }
 
@@ -49,13 +49,10 @@ func (o *SubscribeOK) SetPayload(payload []*models.Message) {
 func (o *SubscribeOK) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
 
 	rw.WriteHeader(200)
-	payload := o.Payload
-	if payload == nil {
-		// return empty array
-		payload = make([]*models.Message, 0, 50)
-	}
-
-	if err := producer.Produce(rw, payload); err != nil {
-		panic(err) // let the recovery middleware deal with this
+	if o.Payload != nil {
+		payload := o.Payload
+		if err := producer.Produce(rw, payload); err != nil {
+			panic(err) // let the recovery middleware deal with this
+		}
 	}
 }

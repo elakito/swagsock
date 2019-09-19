@@ -2,7 +2,9 @@ package swagsock
 
 import (
 	"net/http"
+	"strings"
 
+	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 )
 
@@ -72,4 +74,59 @@ type HandshakeResponse struct {
 	Version    string `json:"version"`
 	TrackingID string `json:"trackingID,omitempty"`
 	Error      string `json:"error,omitempty"`
+}
+
+// ClientTransport is the interface for submitting requests and it defines Submit or SubmitAsync for the synchronous
+// and asynchronous invocation supported in swagsock
+type ClientTransport interface {
+	//Submit(string, RequestWriter, ResponseReader, AuthInfoWriter) (interface{}, error)
+	Submit(*runtime.ClientOperation) (interface{}, error)
+	//SubmitAsync(string, RequestWriter, ResponseReader, AuthInfoWriter, func(string, interface{})) (string, error)
+	SubmitAsync(*runtime.ClientOperation, func(string, interface{}), SubmitAsyncOption) (string, error)
+}
+
+// SubmitAsyncMode represents one of the async submit mode none, subscribe, or unsubscribe
+type SubmitAsyncMode int
+
+const (
+	// SubmitAsyncModeNone represents no option
+	SubmitAsyncModeNone SubmitAsyncMode = iota
+	// SubmitAsyncModeSubscribe represents the subscription option
+	SubmitAsyncModeSubscribe
+	// SubmitAsyncModeUnsubscribe represents the unsubscription option
+	SubmitAsyncModeUnsubscribe
+)
+
+// SubmitAsyncOption represents one of the async submit option none, subscribe, or unsubscribe
+type SubmitAsyncOption string
+
+// Is tests if this option is of the specified mode
+func (o SubmitAsyncOption) Is(mode SubmitAsyncMode) bool {
+	if o == SubmitAsyncOptionNone {
+		return mode == SubmitAsyncModeNone
+	} else if o == SubmitAsyncOptionSubscribe {
+		return mode == SubmitAsyncModeSubscribe
+	} else {
+		return mode == SubmitAsyncModeUnsubscribe
+	}
+}
+
+// Param returns the parameter associated with this option
+func (o SubmitAsyncOption) Param() string {
+	ostr := string(o)
+	if p := strings.Index(ostr, ":"); p > 0 {
+		return ostr[p+1:]
+	}
+	return ""
+}
+
+// SubmitAsyncOptionNone represents no specific option
+const SubmitAsyncOptionNone = ""
+
+// SubmitAsyncOptionSubscribe represents the subscription option
+const SubmitAsyncOptionSubscribe = "subscribe"
+
+// SubmitAsyncOptionUnsubscribe represents the unsubscription option to unsubscribe from the specified subscription id
+func SubmitAsyncOptionUnsubscribe(sid string) SubmitAsyncOption {
+	return SubmitAsyncOption("unsubscribe:" + sid)
 }

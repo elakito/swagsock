@@ -230,10 +230,7 @@ func init() {
           "200": {
             "description": "Returns an empty or a sequence of greeting events",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/greetingReply"
-              }
+              "$ref": "#/definitions/greetingReply"
             }
           }
         }
@@ -582,10 +579,7 @@ func init() {
           "200": {
             "description": "Returns an empty or a sequence of greeting events",
             "schema": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/greetingReply"
-              }
+              "$ref": "#/definitions/greetingReply"
             }
           }
         }

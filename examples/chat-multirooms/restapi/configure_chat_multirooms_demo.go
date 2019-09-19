@@ -85,7 +85,7 @@ func configureAPI(api *operations.ChatMultiroomsDemoAPI) http.Handler {
 		hb, _ := hello.MarshalBinary()
 		bye := &models.Message{Name: params.Name, Room: params.Room, Type: "left"}
 		bb, _ := bye.MarshalBinary()
-		responder := responseMediator.SubscribeTopic(swagsock.GetRequestKey(params.HTTPRequest), params.Room, params.Name, operations.NewSubscribeOK(), hb, bb)
+		responder := responseMediator.SubscribeTopic(swagsock.GetRequestKey(params.HTTPRequest), params.Room, params.Name, operations.NewSubscribeOK().WithPayload(&models.Message{}), hb, bb)
 		return responder
 	})
 

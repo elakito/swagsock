@@ -6,9 +6,11 @@ package operations
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
+	"github.com/elakito/swagsock/swagsock"
+
 	"github.com/go-openapi/runtime"
 
-	strfmt "github.com/go-openapi/strfmt"
+	"github.com/go-openapi/strfmt"
 )
 
 // New creates a new operations API client.
@@ -261,6 +263,244 @@ func (a *Client) Upload(params *UploadParams) (*UploadOK, error) {
 		return nil, err
 	}
 	return result.(*UploadOK), nil
+
+}
+
+/*
+Echo echos back the message
+
+Echo back the message
+*/
+func (a *Client) EchoAsync(params *EchoParams, cb func(string, *EchoOK), sam swagsock.SubmitAsyncOption) (string, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewEchoParams()
+	}
+
+	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+		ID:                 "echo",
+		Method:             "POST",
+		PathPattern:        "/v1/echo",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"text/plain"},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &EchoReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}, func(k string, v interface{}) { cb(k, v.(*EchoOK)) }, sam)
+	if err != nil {
+		return "", err
+	}
+	return reqid, nil
+}
+
+/*
+GetGreetStatus shows when the person was greeted last
+
+Show when the person was last greeted
+*/
+func (a *Client) GetGreetStatusAsync(params *GetGreetStatusParams, cb func(string, *GetGreetStatusOK), sam swagsock.SubmitAsyncOption) (string, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewGetGreetStatusParams()
+	}
+
+	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+		ID:                 "getGreetStatus",
+		Method:             "GET",
+		PathPattern:        "/v1/greet/{name}",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{""},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &GetGreetStatusReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}, func(k string, v interface{}) { cb(k, v.(*GetGreetStatusOK)) }, sam)
+	if err != nil {
+		return "", err
+	}
+	return reqid, nil
+}
+
+/*
+GetGreetSummary shows who has been greeted
+
+Show who has been greeted
+*/
+func (a *Client) GetGreetSummaryAsync(params *GetGreetSummaryParams, cb func(string, *GetGreetSummaryOK), sam swagsock.SubmitAsyncOption) (string, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewGetGreetSummaryParams()
+	}
+
+	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+		ID:                 "getGreetSummary",
+		Method:             "GET",
+		PathPattern:        "/v1/greet",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{""},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &GetGreetSummaryReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}, func(k string, v interface{}) { cb(k, v.(*GetGreetSummaryOK)) }, sam)
+	if err != nil {
+		return "", err
+	}
+	return reqid, nil
+
+}
+
+/*
+Greet greets someone
+
+Greet someone
+*/
+func (a *Client) GreetAsync(params *GreetParams, cb func(string, *GreetOK), sam swagsock.SubmitAsyncOption) (string, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewGreetParams()
+	}
+
+	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+		ID:                 "greet",
+		Method:             "POST",
+		PathPattern:        "/v1/greet/{name}",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &GreetReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}, func(k string, v interface{}) { cb(k, v.(*GreetOK)) }, sam)
+	if err != nil {
+		return "", err
+	}
+	return reqid, nil
+
+}
+
+/*
+Ping pings the greeter service
+
+Ping the greeter service
+*/
+func (a *Client) PingAsync(params *PingParams, cb func(string, *PingOK), sam swagsock.SubmitAsyncOption) (string, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewPingParams()
+	}
+
+	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+		ID:                 "ping",
+		Method:             "GET",
+		PathPattern:        "/v1/ping",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{""},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &PingReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}, func(k string, v interface{}) { cb(k, v.(*PingOK)) }, sam)
+	if err != nil {
+		return "", err
+	}
+	return reqid, nil
+
+}
+
+/*
+Subscribe subscribes to the greeting events
+
+Subscribe to the greeteing events
+*/
+func (a *Client) SubscribeAsync(params *SubscribeParams, cb func(string, *SubscribeOK), sam swagsock.SubmitAsyncOption) (string, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewSubscribeParams()
+	}
+
+	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+		ID:                 "subscribe",
+		Method:             "GET",
+		PathPattern:        "/v1/subscribe/{name}",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{""},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &SubscribeReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}, func(k string, v interface{}) { cb(k, v.(*SubscribeOK)) }, sam)
+	if err != nil {
+		return "", err
+	}
+	return reqid, nil
+
+}
+
+/*
+Unsubscribe unsubscribes from the greeting events
+
+Unsubscribe from the greeting events
+*/
+func (a *Client) UnsubscribeAsync(params *UnsubscribeParams, cb func(string, *UnsubscribeOK), sam swagsock.SubmitAsyncOption) (string, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewUnsubscribeParams()
+	}
+
+	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+		ID:                 "unsubscribe",
+		Method:             "DELETE",
+		PathPattern:        "/v1/unsubscribe/{sid}",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{""},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &UnsubscribeReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}, func(k string, v interface{}) { cb(k, v.(*UnsubscribeOK)) }, sam)
+	if err != nil {
+		return "", err
+	}
+	return reqid, nil
+
+}
+
+/*
+Upload uploads a greeting card
+
+Upload a greeting card
+*/
+func (a *Client) UploadAysnc(params *UploadParams, cb func(string, *UploadOK), sam swagsock.SubmitAsyncOption) (string, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewUploadParams()
+	}
+
+	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+		ID:                 "upload",
+		Method:             "POST",
+		PathPattern:        "/v1/greet/{name}/upload",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"multipart/form-data"},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &UploadReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}, func(k string, v interface{}) { cb(k, v.(*UploadOK)) }, sam)
+	if err != nil {
+		return "", err
+	}
+	return reqid, nil
 
 }
 
