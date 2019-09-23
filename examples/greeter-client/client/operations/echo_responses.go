@@ -24,7 +24,6 @@ type EchoReader struct {
 // ReadResponse reads a server response into the received o.
 func (o *EchoReader) ReadResponse(response runtime.ClientResponse, consumer runtime.Consumer) (interface{}, error) {
 	switch response.Code() {
-
 	case 200:
 		result := NewEchoOK()
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -52,6 +51,10 @@ type EchoOK struct {
 
 func (o *EchoOK) Error() string {
 	return fmt.Sprintf("[POST /v1/echo][%d] echoOK  %+v", 200, o.Payload)
+}
+
+func (o *EchoOK) GetPayload() *models.EchoReply {
+	return o.Payload
 }
 
 func (o *EchoOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

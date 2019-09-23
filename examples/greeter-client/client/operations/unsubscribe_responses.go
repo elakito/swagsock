@@ -24,7 +24,6 @@ type UnsubscribeReader struct {
 // ReadResponse reads a server response into the received o.
 func (o *UnsubscribeReader) ReadResponse(response runtime.ClientResponse, consumer runtime.Consumer) (interface{}, error) {
 	switch response.Code() {
-
 	case 200:
 		result := NewUnsubscribeOK()
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -52,6 +51,10 @@ type UnsubscribeOK struct {
 
 func (o *UnsubscribeOK) Error() string {
 	return fmt.Sprintf("[DELETE /v1/unsubscribe/{sid}][%d] unsubscribeOK  %+v", 200, o.Payload)
+}
+
+func (o *UnsubscribeOK) GetPayload() *models.GreetingSummary {
+	return o.Payload
 }
 
 func (o *UnsubscribeOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

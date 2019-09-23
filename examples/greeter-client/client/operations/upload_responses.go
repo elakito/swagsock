@@ -24,14 +24,12 @@ type UploadReader struct {
 // ReadResponse reads a server response into the received o.
 func (o *UploadReader) ReadResponse(response runtime.ClientResponse, consumer runtime.Consumer) (interface{}, error) {
 	switch response.Code() {
-
 	case 200:
 		result := NewUploadOK()
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
 			return nil, err
 		}
 		return result, nil
-
 	case 500:
 		result := NewUploadInternalServerError()
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -61,6 +59,10 @@ func (o *UploadOK) Error() string {
 	return fmt.Sprintf("[POST /v1/greet/{name}/upload][%d] uploadOK  %+v", 200, o.Payload)
 }
 
+func (o *UploadOK) GetPayload() *models.UploadStatus {
+	return o.Payload
+}
+
 func (o *UploadOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	o.Payload = new(models.UploadStatus)
@@ -88,6 +90,10 @@ type UploadInternalServerError struct {
 
 func (o *UploadInternalServerError) Error() string {
 	return fmt.Sprintf("[POST /v1/greet/{name}/upload][%d] uploadInternalServerError  %+v", 500, o.Payload)
+}
+
+func (o *UploadInternalServerError) GetPayload() string {
+	return o.Payload
 }
 
 func (o *UploadInternalServerError) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

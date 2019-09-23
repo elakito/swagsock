@@ -6,11 +6,12 @@ package operations
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
-	"github.com/elakito/swagsock/swagsock"
+	"fmt"
 
+	"github.com/elakito/swagsock/swagsock"
 	"github.com/go-openapi/runtime"
 
-	"github.com/go-openapi/strfmt"
+	strfmt "github.com/go-openapi/strfmt"
 )
 
 // New creates a new operations API client.
@@ -52,8 +53,48 @@ func (a *Client) Echo(params *EchoParams) (*EchoOK, error) {
 	if err != nil {
 		return nil, err
 	}
-	return result.(*EchoOK), nil
+	success, ok := result.(*EchoOK)
+	if ok {
+		return success, nil
+	}
+	// unexpected success response
+	// safeguard: normally, absent a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for echo: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
 
+/*
+EchoAsync echos back the message
+Limitation: currently only one successful return type is supported
+Echo back the message
+*/
+func (a *Client) EchoAsync(params *EchoParams, cb func(string, *EchoOK), sam swagsock.SubmitAsyncOption) (string, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewEchoParams()
+	}
+
+	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+		ID:                 "echo",
+		Method:             "POST",
+		PathPattern:        "/v1/echo",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"text/plain"},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &EchoReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}, func(k string, v interface{}) {
+		value, ok := v.(*EchoOK)
+		if ok {
+			cb(k, value)
+		}
+	}, sam)
+	if err != nil {
+		return "", err
+	}
+	return requid, nil
 }
 
 /*
@@ -82,8 +123,48 @@ func (a *Client) GetGreetStatus(params *GetGreetStatusParams) (*GetGreetStatusOK
 	if err != nil {
 		return nil, err
 	}
-	return result.(*GetGreetStatusOK), nil
+	success, ok := result.(*GetGreetStatusOK)
+	if ok {
+		return success, nil
+	}
+	// unexpected success response
+	// safeguard: normally, absent a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for getGreetStatus: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
 
+/*
+GetGreetStatusAsync shows when the person was greeted last
+Limitation: currently only one successful return type is supported
+Show when the person was last greeted
+*/
+func (a *Client) GetGreetStatusAsync(params *GetGreetStatusParams, cb func(string, *GetGreetStatusOK), sam swagsock.SubmitAsyncOption) (string, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewGetGreetStatusParams()
+	}
+
+	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+		ID:                 "getGreetStatus",
+		Method:             "GET",
+		PathPattern:        "/v1/greet/{name}",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{""},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &GetGreetStatusReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}, func(k string, v interface{}) {
+		value, ok := v.(*GetGreetStatusOK)
+		if ok {
+			cb(k, value)
+		}
+	}, sam)
+	if err != nil {
+		return "", err
+	}
+	return requid, nil
 }
 
 /*
@@ -112,8 +193,48 @@ func (a *Client) GetGreetSummary(params *GetGreetSummaryParams) (*GetGreetSummar
 	if err != nil {
 		return nil, err
 	}
-	return result.(*GetGreetSummaryOK), nil
+	success, ok := result.(*GetGreetSummaryOK)
+	if ok {
+		return success, nil
+	}
+	// unexpected success response
+	// safeguard: normally, absent a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for getGreetSummary: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
 
+/*
+GetGreetSummaryAsync shows who has been greeted
+Limitation: currently only one successful return type is supported
+Show who has been greeted
+*/
+func (a *Client) GetGreetSummaryAsync(params *GetGreetSummaryParams, cb func(string, *GetGreetSummaryOK), sam swagsock.SubmitAsyncOption) (string, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewGetGreetSummaryParams()
+	}
+
+	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+		ID:                 "getGreetSummary",
+		Method:             "GET",
+		PathPattern:        "/v1/greet",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{""},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &GetGreetSummaryReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}, func(k string, v interface{}) {
+		value, ok := v.(*GetGreetSummaryOK)
+		if ok {
+			cb(k, value)
+		}
+	}, sam)
+	if err != nil {
+		return "", err
+	}
+	return requid, nil
 }
 
 /*
@@ -142,8 +263,48 @@ func (a *Client) Greet(params *GreetParams) (*GreetOK, error) {
 	if err != nil {
 		return nil, err
 	}
-	return result.(*GreetOK), nil
+	success, ok := result.(*GreetOK)
+	if ok {
+		return success, nil
+	}
+	// unexpected success response
+	// safeguard: normally, absent a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for greet: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
 
+/*
+GreetAsync greets someone
+Limitation: currently only one successful return type is supported
+Greet someone
+*/
+func (a *Client) GreetAsync(params *GreetParams, cb func(string, *GreetOK), sam swagsock.SubmitAsyncOption) (string, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewGreetParams()
+	}
+
+	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+		ID:                 "greet",
+		Method:             "POST",
+		PathPattern:        "/v1/greet/{name}",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &GreetReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}, func(k string, v interface{}) {
+		value, ok := v.(*GreetOK)
+		if ok {
+			cb(k, value)
+		}
+	}, sam)
+	if err != nil {
+		return "", err
+	}
+	return requid, nil
 }
 
 /*
@@ -172,8 +333,48 @@ func (a *Client) Ping(params *PingParams) (*PingOK, error) {
 	if err != nil {
 		return nil, err
 	}
-	return result.(*PingOK), nil
+	success, ok := result.(*PingOK)
+	if ok {
+		return success, nil
+	}
+	// unexpected success response
+	// safeguard: normally, absent a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for ping: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
 
+/*
+PingAsync pings the greeter service
+Limitation: currently only one successful return type is supported
+Ping the greeter service
+*/
+func (a *Client) PingAsync(params *PingParams, cb func(string, *PingOK), sam swagsock.SubmitAsyncOption) (string, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewPingParams()
+	}
+
+	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+		ID:                 "ping",
+		Method:             "GET",
+		PathPattern:        "/v1/ping",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{""},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &PingReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}, func(k string, v interface{}) {
+		value, ok := v.(*PingOK)
+		if ok {
+			cb(k, value)
+		}
+	}, sam)
+	if err != nil {
+		return "", err
+	}
+	return requid, nil
 }
 
 /*
@@ -202,8 +403,48 @@ func (a *Client) Subscribe(params *SubscribeParams) (*SubscribeOK, error) {
 	if err != nil {
 		return nil, err
 	}
-	return result.(*SubscribeOK), nil
+	success, ok := result.(*SubscribeOK)
+	if ok {
+		return success, nil
+	}
+	// unexpected success response
+	// safeguard: normally, absent a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for subscribe: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
 
+/*
+SubscribeAsync subscribes to the greeting events
+Limitation: currently only one successful return type is supported
+Subscribe to the greeteing events
+*/
+func (a *Client) SubscribeAsync(params *SubscribeParams, cb func(string, *SubscribeOK), sam swagsock.SubmitAsyncOption) (string, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewSubscribeParams()
+	}
+
+	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+		ID:                 "subscribe",
+		Method:             "GET",
+		PathPattern:        "/v1/subscribe/{name}",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{""},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &SubscribeReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}, func(k string, v interface{}) {
+		value, ok := v.(*SubscribeOK)
+		if ok {
+			cb(k, value)
+		}
+	}, sam)
+	if err != nil {
+		return "", err
+	}
+	return requid, nil
 }
 
 /*
@@ -232,8 +473,48 @@ func (a *Client) Unsubscribe(params *UnsubscribeParams) (*UnsubscribeOK, error) 
 	if err != nil {
 		return nil, err
 	}
-	return result.(*UnsubscribeOK), nil
+	success, ok := result.(*UnsubscribeOK)
+	if ok {
+		return success, nil
+	}
+	// unexpected success response
+	// safeguard: normally, absent a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for unsubscribe: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
 
+/*
+UnsubscribeAsync unsubscribes from the greeting events
+Limitation: currently only one successful return type is supported
+Unsubscribe from the greeting events
+*/
+func (a *Client) UnsubscribeAsync(params *UnsubscribeParams, cb func(string, *UnsubscribeOK), sam swagsock.SubmitAsyncOption) (string, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewUnsubscribeParams()
+	}
+
+	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+		ID:                 "unsubscribe",
+		Method:             "DELETE",
+		PathPattern:        "/v1/unsubscribe/{sid}",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{""},
+		Schemes:            []string{"http", "https"},
+		Params:             params,
+		Reader:             &UnsubscribeReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}, func(k string, v interface{}) {
+		value, ok := v.(*UnsubscribeOK)
+		if ok {
+			cb(k, value)
+		}
+	}, sam)
+	if err != nil {
+		return "", err
+	}
+	return requid, nil
 }
 
 /*
@@ -262,230 +543,28 @@ func (a *Client) Upload(params *UploadParams) (*UploadOK, error) {
 	if err != nil {
 		return nil, err
 	}
-	return result.(*UploadOK), nil
-
+	success, ok := result.(*UploadOK)
+	if ok {
+		return success, nil
+	}
+	// unexpected success response
+	// safeguard: normally, absent a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for upload: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
 }
 
 /*
-Echo echos back the message
-
-Echo back the message
-*/
-func (a *Client) EchoAsync(params *EchoParams, cb func(string, *EchoOK), sam swagsock.SubmitAsyncOption) (string, error) {
-	// TODO: Validate the params before sending
-	if params == nil {
-		params = NewEchoParams()
-	}
-
-	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
-		ID:                 "echo",
-		Method:             "POST",
-		PathPattern:        "/v1/echo",
-		ProducesMediaTypes: []string{"application/json"},
-		ConsumesMediaTypes: []string{"text/plain"},
-		Schemes:            []string{"http", "https"},
-		Params:             params,
-		Reader:             &EchoReader{formats: a.formats},
-		Context:            params.Context,
-		Client:             params.HTTPClient,
-	}, func(k string, v interface{}) { cb(k, v.(*EchoOK)) }, sam)
-	if err != nil {
-		return "", err
-	}
-	return reqid, nil
-}
-
-/*
-GetGreetStatus shows when the person was greeted last
-
-Show when the person was last greeted
-*/
-func (a *Client) GetGreetStatusAsync(params *GetGreetStatusParams, cb func(string, *GetGreetStatusOK), sam swagsock.SubmitAsyncOption) (string, error) {
-	// TODO: Validate the params before sending
-	if params == nil {
-		params = NewGetGreetStatusParams()
-	}
-
-	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
-		ID:                 "getGreetStatus",
-		Method:             "GET",
-		PathPattern:        "/v1/greet/{name}",
-		ProducesMediaTypes: []string{"application/json"},
-		ConsumesMediaTypes: []string{""},
-		Schemes:            []string{"http", "https"},
-		Params:             params,
-		Reader:             &GetGreetStatusReader{formats: a.formats},
-		Context:            params.Context,
-		Client:             params.HTTPClient,
-	}, func(k string, v interface{}) { cb(k, v.(*GetGreetStatusOK)) }, sam)
-	if err != nil {
-		return "", err
-	}
-	return reqid, nil
-}
-
-/*
-GetGreetSummary shows who has been greeted
-
-Show who has been greeted
-*/
-func (a *Client) GetGreetSummaryAsync(params *GetGreetSummaryParams, cb func(string, *GetGreetSummaryOK), sam swagsock.SubmitAsyncOption) (string, error) {
-	// TODO: Validate the params before sending
-	if params == nil {
-		params = NewGetGreetSummaryParams()
-	}
-
-	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
-		ID:                 "getGreetSummary",
-		Method:             "GET",
-		PathPattern:        "/v1/greet",
-		ProducesMediaTypes: []string{"application/json"},
-		ConsumesMediaTypes: []string{""},
-		Schemes:            []string{"http", "https"},
-		Params:             params,
-		Reader:             &GetGreetSummaryReader{formats: a.formats},
-		Context:            params.Context,
-		Client:             params.HTTPClient,
-	}, func(k string, v interface{}) { cb(k, v.(*GetGreetSummaryOK)) }, sam)
-	if err != nil {
-		return "", err
-	}
-	return reqid, nil
-
-}
-
-/*
-Greet greets someone
-
-Greet someone
-*/
-func (a *Client) GreetAsync(params *GreetParams, cb func(string, *GreetOK), sam swagsock.SubmitAsyncOption) (string, error) {
-	// TODO: Validate the params before sending
-	if params == nil {
-		params = NewGreetParams()
-	}
-
-	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
-		ID:                 "greet",
-		Method:             "POST",
-		PathPattern:        "/v1/greet/{name}",
-		ProducesMediaTypes: []string{"application/json"},
-		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"http", "https"},
-		Params:             params,
-		Reader:             &GreetReader{formats: a.formats},
-		Context:            params.Context,
-		Client:             params.HTTPClient,
-	}, func(k string, v interface{}) { cb(k, v.(*GreetOK)) }, sam)
-	if err != nil {
-		return "", err
-	}
-	return reqid, nil
-
-}
-
-/*
-Ping pings the greeter service
-
-Ping the greeter service
-*/
-func (a *Client) PingAsync(params *PingParams, cb func(string, *PingOK), sam swagsock.SubmitAsyncOption) (string, error) {
-	// TODO: Validate the params before sending
-	if params == nil {
-		params = NewPingParams()
-	}
-
-	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
-		ID:                 "ping",
-		Method:             "GET",
-		PathPattern:        "/v1/ping",
-		ProducesMediaTypes: []string{"application/json"},
-		ConsumesMediaTypes: []string{""},
-		Schemes:            []string{"http", "https"},
-		Params:             params,
-		Reader:             &PingReader{formats: a.formats},
-		Context:            params.Context,
-		Client:             params.HTTPClient,
-	}, func(k string, v interface{}) { cb(k, v.(*PingOK)) }, sam)
-	if err != nil {
-		return "", err
-	}
-	return reqid, nil
-
-}
-
-/*
-Subscribe subscribes to the greeting events
-
-Subscribe to the greeteing events
-*/
-func (a *Client) SubscribeAsync(params *SubscribeParams, cb func(string, *SubscribeOK), sam swagsock.SubmitAsyncOption) (string, error) {
-	// TODO: Validate the params before sending
-	if params == nil {
-		params = NewSubscribeParams()
-	}
-
-	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
-		ID:                 "subscribe",
-		Method:             "GET",
-		PathPattern:        "/v1/subscribe/{name}",
-		ProducesMediaTypes: []string{"application/json"},
-		ConsumesMediaTypes: []string{""},
-		Schemes:            []string{"http", "https"},
-		Params:             params,
-		Reader:             &SubscribeReader{formats: a.formats},
-		Context:            params.Context,
-		Client:             params.HTTPClient,
-	}, func(k string, v interface{}) { cb(k, v.(*SubscribeOK)) }, sam)
-	if err != nil {
-		return "", err
-	}
-	return reqid, nil
-
-}
-
-/*
-Unsubscribe unsubscribes from the greeting events
-
-Unsubscribe from the greeting events
-*/
-func (a *Client) UnsubscribeAsync(params *UnsubscribeParams, cb func(string, *UnsubscribeOK), sam swagsock.SubmitAsyncOption) (string, error) {
-	// TODO: Validate the params before sending
-	if params == nil {
-		params = NewUnsubscribeParams()
-	}
-
-	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
-		ID:                 "unsubscribe",
-		Method:             "DELETE",
-		PathPattern:        "/v1/unsubscribe/{sid}",
-		ProducesMediaTypes: []string{"application/json"},
-		ConsumesMediaTypes: []string{""},
-		Schemes:            []string{"http", "https"},
-		Params:             params,
-		Reader:             &UnsubscribeReader{formats: a.formats},
-		Context:            params.Context,
-		Client:             params.HTTPClient,
-	}, func(k string, v interface{}) { cb(k, v.(*UnsubscribeOK)) }, sam)
-	if err != nil {
-		return "", err
-	}
-	return reqid, nil
-
-}
-
-/*
-Upload uploads a greeting card
-
+UploadAsync uploads a greeting card
+Limitation: currently only one successful return type is supported
 Upload a greeting card
 */
-func (a *Client) UploadAysnc(params *UploadParams, cb func(string, *UploadOK), sam swagsock.SubmitAsyncOption) (string, error) {
+func (a *Client) UploadAsync(params *UploadParams, cb func(string, *UploadOK), sam swagsock.SubmitAsyncOption) (string, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewUploadParams()
 	}
 
-	reqid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
+	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
 		ID:                 "upload",
 		Method:             "POST",
 		PathPattern:        "/v1/greet/{name}/upload",
@@ -496,12 +575,16 @@ func (a *Client) UploadAysnc(params *UploadParams, cb func(string, *UploadOK), s
 		Reader:             &UploadReader{formats: a.formats},
 		Context:            params.Context,
 		Client:             params.HTTPClient,
-	}, func(k string, v interface{}) { cb(k, v.(*UploadOK)) }, sam)
+	}, func(k string, v interface{}) {
+		value, ok := v.(*UploadOK)
+		if ok {
+			cb(k, value)
+		}
+	}, sam)
 	if err != nil {
 		return "", err
 	}
-	return reqid, nil
-
+	return requid, nil
 }
 
 // SetTransport changes the transport on the client

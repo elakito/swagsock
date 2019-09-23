@@ -24,7 +24,6 @@ type GreetReader struct {
 // ReadResponse reads a server response into the received o.
 func (o *GreetReader) ReadResponse(response runtime.ClientResponse, consumer runtime.Consumer) (interface{}, error) {
 	switch response.Code() {
-
 	case 200:
 		result := NewGreetOK()
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -52,6 +51,10 @@ type GreetOK struct {
 
 func (o *GreetOK) Error() string {
 	return fmt.Sprintf("[POST /v1/greet/{name}][%d] greetOK  %+v", 200, o.Payload)
+}
+
+func (o *GreetOK) GetPayload() *models.GreetingReply {
+	return o.Payload
 }
 
 func (o *GreetOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

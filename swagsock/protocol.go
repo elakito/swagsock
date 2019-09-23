@@ -443,11 +443,11 @@ func needsChunkEnabled(body io.Reader) bool {
 }
 
 func newHTTPResponse(id string, messageType int, conn connectionWriter, connlock *sync.Mutex, codec Codec) http.ResponseWriter {
-	resp := &response{id: id, messageType: messageType, headers: make(http.Header), conn: conn, connlock: connlock, codec: codec}
+	resp := &responseWriter{id: id, messageType: messageType, headers: make(http.Header), conn: conn, connlock: connlock, codec: codec}
 	return resp
 }
 
-type response struct {
+type responseWriter struct {
 	id          string
 	headers     http.Header
 	code        int
@@ -457,11 +457,11 @@ type response struct {
 	connlock    *sync.Mutex
 }
 
-func (r *response) Header() http.Header {
+func (r *responseWriter) Header() http.Header {
 	return r.headers
 }
 
-func (r *response) Write(body []byte) (int, error) {
+func (r *responseWriter) Write(body []byte) (int, error) {
 	// flush the buffer when the content-type header is not set
 	data, _ := r.codec.EncodeSwaggerSocketMessage(r.buildHeaders(), body)
 	r.connlock.Lock()
@@ -470,7 +470,7 @@ func (r *response) Write(body []byte) (int, error) {
 	return len(body), nil
 }
 
-func (r *response) WriteHeader(code int) {
+func (r *responseWriter) WriteHeader(code int) {
 	r.code = code
 	ctype := r.headers.Get("Content-Type")
 	if ctype == "" {
@@ -480,7 +480,7 @@ func (r *response) WriteHeader(code int) {
 	}
 }
 
-func (r *response) buildHeaders() map[string]interface{} {
+func (r *responseWriter) buildHeaders() map[string]interface{} {
 	headers := make(map[string]interface{})
 	headers["id"] = r.id
 	headers["code"] = r.code
@@ -593,7 +593,7 @@ type ReusableResponder struct {
 	mediator  ResponseMediator
 }
 
-// WriteResponse writes the initial response to the response writer
+// WriteResponse writes the initial responseWriter to the responseWriter writer
 func (r *ReusableResponder) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
 	if r.writer == nil {
 		r.writer = rw
@@ -608,7 +608,7 @@ func (r *ReusableResponder) WriteResponse(rw http.ResponseWriter, producer runti
 	}
 }
 
-// Write writes the subsequent response to the response writer
+// Write writes the subsequent responseWriter to the responseWriter writer
 func (r *ReusableResponder) Write(b []byte) (int, error) {
 	return r.writer.Write(b)
 }

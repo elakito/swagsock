@@ -24,7 +24,6 @@ type SubscribeReader struct {
 // ReadResponse reads a server response into the received o.
 func (o *SubscribeReader) ReadResponse(response runtime.ClientResponse, consumer runtime.Consumer) (interface{}, error) {
 	switch response.Code() {
-
 	case 200:
 		result := NewSubscribeOK()
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -52,6 +51,10 @@ type SubscribeOK struct {
 
 func (o *SubscribeOK) Error() string {
 	return fmt.Sprintf("[GET /v1/subscribe/{name}][%d] subscribeOK  %+v", 200, o.Payload)
+}
+
+func (o *SubscribeOK) GetPayload() *models.GreetingReply {
+	return o.Payload
 }
 
 func (o *SubscribeOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

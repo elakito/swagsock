@@ -120,7 +120,7 @@ func TestCreateDefaultProtocolHandler(t *testing.T) {
 }
 
 func TestBuildHeaders(t *testing.T) {
-	resp := &response{id: "513", code: 200, headers: make(http.Header)}
+	resp := &responseWriter{id: "513", code: 200, headers: make(http.Header)}
 	assert.Equal(t, map[string]interface{}{
 		"id":   "513",
 		"code": 200,
@@ -187,7 +187,7 @@ func TestServeNormal(t *testing.T) {
 		assert.Equal(t, mmap["path"].(string), hh.req.RequestURI[8:])
 		assert.Equal(t, buildRequestKey(testTrackingID, mmap["id"].(string)), GetRequestKey(hh.req))
 
-		hhresp, ok := hh.resp.(*response)
+		hhresp, ok := hh.resp.(*responseWriter)
 		assert.True(t, ok)
 		assert.Equal(t, mmap["id"].(string), hhresp.id)
 	}

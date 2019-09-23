@@ -24,7 +24,6 @@ type GetGreetSummaryReader struct {
 // ReadResponse reads a server response into the received o.
 func (o *GetGreetSummaryReader) ReadResponse(response runtime.ClientResponse, consumer runtime.Consumer) (interface{}, error) {
 	switch response.Code() {
-
 	case 200:
 		result := NewGetGreetSummaryOK()
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -52,6 +51,10 @@ type GetGreetSummaryOK struct {
 
 func (o *GetGreetSummaryOK) Error() string {
 	return fmt.Sprintf("[GET /v1/greet][%d] getGreetSummaryOK  %+v", 200, o.Payload)
+}
+
+func (o *GetGreetSummaryOK) GetPayload() *models.GreetingSummary {
+	return o.Payload
 }
 
 func (o *GetGreetSummaryOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

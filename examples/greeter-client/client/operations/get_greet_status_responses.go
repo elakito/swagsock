@@ -24,7 +24,6 @@ type GetGreetStatusReader struct {
 // ReadResponse reads a server response into the received o.
 func (o *GetGreetStatusReader) ReadResponse(response runtime.ClientResponse, consumer runtime.Consumer) (interface{}, error) {
 	switch response.Code() {
-
 	case 200:
 		result := NewGetGreetStatusOK()
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -52,6 +51,10 @@ type GetGreetStatusOK struct {
 
 func (o *GetGreetStatusOK) Error() string {
 	return fmt.Sprintf("[GET /v1/greet/{name}][%d] getGreetStatusOK  %+v", 200, o.Payload)
+}
+
+func (o *GetGreetStatusOK) GetPayload() *models.GreetingStatus {
+	return o.Payload
 }
 
 func (o *GetGreetStatusOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

@@ -99,8 +99,13 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 // The globalMiddleware uses the swaggersocket handler to handle websocket requests
 func globalMiddleware(handler http.Handler) http.Handler {
 
-	// instantiate the protocol handler
-	protocolHandler := swagsock.CreateProtocolHandler(nil)
+    // instantiate the protocol handler
+    conf := swagsock.NewConfig()
+    conf.Heartbeat = 5
+    conf.Log = log.New(os.Stdout, "[swagsocket] ", log.LstdFlags)
+    responseMediator = conf.ResponseMediator
+
+    protocolHandler := swagsock.CreateProtocolHandler(conf)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// use the protocol handler to handle websocket requests
@@ -122,14 +127,42 @@ A sampel server side code is located at https://github.com/elakito/swagsock/tree
 
 The code to enable the client side processing in the generated client code is available, however, this is still in work in progress.
 
-- Integration to the client code requires some changes to go-openapi/runtime. Therefore, currently the demo client includes some locally copied and modified code.
-- Currently, the operations are invoked in the same way using runtime.Submit which synchronously waits for the response. To utilize the websocket's asynchronous behavior, it will be more suitable to have the asynchronous version of runtime.Submit. (e.g., adding runtime.SubmitAsync to return the result asynchronously)
+- The client code is using the custom template that adds the generatio of asynchronous API that can utilize Swaggersocket.
+- The operations can be invoked in two ways: the same way using runtime.Submit which synchronously waits for the response or another way using a new runtime.SubmitAsync which asynchronously waits for the response. In this second way, the websocket's asynchronous behavior is utilized.
 
-A sampel client side code is located at https://github.com/elakito/swagsock/tree/master/examples/greeter-client
+.Generated Echo operations
+----
+func (a *Client) Echo(params *EchoParams) (*EchoOK, error) {
+  ...
+}
+
+func (a *Client) EchoAsync(params *EchoParams, cb func(string, *EchoOK), sam swagsock.SubmitAsyncOption) (string, error) {
+  ...
+}
+----
+
+The asynchronous variant of the operation takes two additional arguments, the callback function and the submit option parameter and returns the request identifier. The callback function will be invoked when the response is rexceived. The first argument in the callback funciton is the request identifier. The submit option controls how the response is delivered to the callback.
+
+
+A sample client side code is located at https://github.com/elakito/swagsock/tree/master/examples/greeter-client
+
 
 ==== Samples
+
  * https://github.com/elakito/swagsock/tree/master/examples/greeter[examples/greeter]
   - This server is generated from examples/greeter/swagger.yaml using go-swagger and it is enabled for websocket. This service has normal request and response operations for greeting service and in addition, the subscribe and unsubscribe operations to subsribe to the greet events and receive the greeting events asynchronously.
+
+ * https://github.com/elakito/swagsock/tree/master/examples/greeter-client[examples/greeter-client]
+  - This client is generated from examples/greeter/swagger.yaml using go-swagger with the custom template and it is enabled for websocket.
+
+ * https://github.com/elakito/swagsock/tree/master/examples/node-greeter-clients/node-client]
+  - A node.js client using plain websocket library to call the greeter service.
+
+* https://github.com/elakito/swagsock/tree/master/examples/clients/atmosphere-node-client[examples/node-greeter-clients/atmosphere-node-client]
+  - A node.js client using atmosphere.js to call the greeter service.
+
+ * https://github.com/elakito/swagsock/tree/master/examples/node-greeter-clients/swagsock-client]
+  - A node.js client using swagsock.js to call the greeter service.
 
  * https://github.com/elakito/swagsock/tree/master/examples/chat[examples/chat]
   - This server is generated from examples/chat/swagger.yaml using go-swagger and it is enabled for websocket. This is a chat service. This example includes a browser client that uses swagsock.js.
@@ -137,15 +170,8 @@ A sampel client side code is located at https://github.com/elakito/swagsock/tree
  * https://github.com/elakito/swagsock/tree/master/examples/chat-multirooms[examples/chat-multirooms]
   - This server is generated from examples/chat-multirooms/swagger.yaml using go-swagger and it is enabled for websocket. This is a chat service supporting multiple chat rooms. This example includes a browser client that uses swagsock.js.
 
- * https://github.com/elakito/swagsock/tree/master/examples/node-greeter-clients/node-client]
-  - A node.js client to call the greeter service.
 
-* https://github.com/elakito/swagsock/tree/master/examples/clients/atmosphere-node-client[examples/node-greeter-clients/atmosphere-node-client]
-  - A node.js client based on atmosphere.js to call the greeter service.
-
- * https://github.com/elakito/swagsock/tree/master/examples/node-greeter-clients/swagsock-client]
-  - A node.js client based on swagsock.js to call the greeter service.
-
+The generated code included in the above examples are generated by go-swagger version 0.20.1, but an earlier version such as 0.17.0 should also work.
 
 ==== References
 

@@ -24,7 +24,6 @@ type PingReader struct {
 // ReadResponse reads a server response into the received o.
 func (o *PingReader) ReadResponse(response runtime.ClientResponse, consumer runtime.Consumer) (interface{}, error) {
 	switch response.Code() {
-
 	case 200:
 		result := NewPingOK()
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -52,6 +51,10 @@ type PingOK struct {
 
 func (o *PingOK) Error() string {
 	return fmt.Sprintf("[GET /v1/ping][%d] pingOK  %+v", 200, o.Payload)
+}
+
+func (o *PingOK) GetPayload() *models.Pong {
+	return o.Payload
 }
 
 func (o *PingOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

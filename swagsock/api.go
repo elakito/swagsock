@@ -28,7 +28,7 @@ type ProtocolHandler interface {
 
 // ResponseMediator is the interface to manage responders and delivery of responses to the subscribers
 type ResponseMediator interface {
-	// Subscribe subscribes to the specified name. Parameters responder, hello, and bye represent the response sent
+	// Subscribe subscribes to the specified name. Parameters responder, hello, and bye represent the responseWriter sent
 	// to the requester, the optional hello and bye messages sent to the subscribers.
 	Subscribe(key string, name string, responder middleware.Responder, hello []byte, bye []byte) middleware.Responder
 	SubscribeTopic(key string, topic string, name string, responder middleware.Responder, hello []byte, bye []byte) middleware.Responder
@@ -69,7 +69,7 @@ type HandshakeRequest struct {
 	Version string `json:"version"`
 }
 
-// HandshakeResponse is the handshake response message that is sent from the server
+// HandshakeResponse is the handshake responseWriter message that is sent from the server
 type HandshakeResponse struct {
 	Version    string `json:"version"`
 	TrackingID string `json:"trackingID,omitempty"`
@@ -83,6 +83,8 @@ type ClientTransport interface {
 	Submit(*runtime.ClientOperation) (interface{}, error)
 	//SubmitAsync(string, RequestWriter, ResponseReader, AuthInfoWriter, func(string, interface{})) (string, error)
 	SubmitAsync(*runtime.ClientOperation, func(string, interface{}), SubmitAsyncOption) (string, error)
+	//Close closes the socket
+	Close()
 }
 
 // SubmitAsyncMode represents one of the async submit mode none, subscribe, or unsubscribe

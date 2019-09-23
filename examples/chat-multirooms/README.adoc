@@ -2,7 +2,7 @@
 
 This chat server is a REST server that uses Swaggersocket to provide a multiroom chat service.
 
-The server side code has been generated from the included https://raw.githubusercontent.com/elakito/swagsock/master/examples/chat-multiroom/swagger.json[swagger.json] using go swagger (version 0.19.0) by command
+The server side code has been generated from the included https://raw.githubusercontent.com/elakito/swagsock/master/examples/chat-multirooms/swagger.json[swagger.json] using go swagger by command
 ----
 $ swagger generate server -f swagger.json -A chat-multirooms-demo
 ----
