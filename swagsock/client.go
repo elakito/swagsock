@@ -206,7 +206,7 @@ func (t *wstransport) SubmitAsync(operation *runtime.ClientOperation, cb func(st
 			if resp, err := operation.Reader.ReadResponse(r, cons); err == nil {
 				cb(reqid, resp)
 			} else {
-				// write warning log
+				cb(reqid, err)
 			}
 		}
 	}, sao.Is(SubmitAsyncModeSubscribe))

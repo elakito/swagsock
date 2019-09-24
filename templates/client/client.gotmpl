@@ -109,12 +109,11 @@ func (a *Client) {{ pascalize .Name }}(params *{{ pascalize .Name }}Params{{ if 
 Limitation: currently only one successful return type is supported
 {{ blockcomment .Description }}{{ end }}{{ else if .Description}}{{ blockcomment .Description }}{{ else }}{{ humanize .Name }} API{{ end }}
 */
-func (a *Client) {{ pascalize .Name }}Async(params *{{ pascalize .Name }}Params, cb func(string{{ if .SuccessResponse }}{{ range .SuccessResponses }}, *{{ pascalize .Name }}{{ end }}{{ end }}), sam swagsock.SubmitAsyncOption, {{ if .Authorized }}, authInfo runtime.ClientAuthInfoWriter{{end}}{{ if .HasStreamingResponse }}, writer io.Writer{{ end }}) (string, error) {
+func (a *Client) {{ pascalize .Name }}Async(params *{{ pascalize .Name }}Params, cb func(string{{ if .SuccessResponse }}{{ range .SuccessResponses }}, *{{ pascalize .Name }}{{ end }}{{ end }}, error), sam swagsock.SubmitAsyncOption, {{ if .Authorized }}, authInfo runtime.ClientAuthInfoWriter{{end}}{{ if .HasStreamingResponse }}, writer io.Writer{{ end }}) (string, error) {
   // TODO: Validate the params before sending
   if params == nil {
     params = New{{ pascalize .Name }}Params()
   }
-  {{ $length := len .SuccessResponses }}
   requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
     ID: {{ printf "%q" .Name }},
     Method: {{ printf "%q" .Method }},
@@ -128,23 +127,16 @@ func (a *Client) {{ pascalize .Name }}Async(params *{{ pascalize .Name }}Params,
     Context: params.Context,
     Client: params.HTTPClient,
   }, func(k string, v interface{}) {
- {{- $length := len .SuccessResponses }}
  {{- if .SuccessResponse }}
-    {{- if eq $length 1 }}
-  value, ok := v.(*{{ pascalize .SuccessResponse.Name }})
-  if ok {
-    cb(k, value)
-  }
-{{- else }}
-{{- $responses := .SuccessResponses }}
+ {{- $responses := .SuccessResponses }}
   switch value := v.(type) {
       {{- range $i, $v := $responses }}
   case *{{ pascalize $v.Name }}:
-    cb(k{{ range $j, $u := $responses }}, {{if eq $i $j }}value{{ else }}nil{{ end }}{{ end }})
+    cb(k{{ range $j, $u := $responses }}, {{if eq $i $j }}value{{ else }}nil{{ end }}{{ end }}, nil)
       {{- end }}
+  case error:
+    cb(k{{ range $j, $u := $responses }}, nil{{ end }}, value)
   }
-
-{{- end }}
 {{- end }}
  }, sam)
   if err != nil {

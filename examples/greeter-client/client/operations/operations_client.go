@@ -68,12 +68,11 @@ EchoAsync echos back the message
 Limitation: currently only one successful return type is supported
 Echo back the message
 */
-func (a *Client) EchoAsync(params *EchoParams, cb func(string, *EchoOK), sam swagsock.SubmitAsyncOption) (string, error) {
+func (a *Client) EchoAsync(params *EchoParams, cb func(string, *EchoOK, error), sam swagsock.SubmitAsyncOption) (string, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewEchoParams()
 	}
-
 	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
 		ID:                 "echo",
 		Method:             "POST",
@@ -86,9 +85,11 @@ func (a *Client) EchoAsync(params *EchoParams, cb func(string, *EchoOK), sam swa
 		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}, func(k string, v interface{}) {
-		value, ok := v.(*EchoOK)
-		if ok {
-			cb(k, value)
+		switch value := v.(type) {
+		case *EchoOK:
+			cb(k, value, nil)
+		case error:
+			cb(k, nil, value)
 		}
 	}, sam)
 	if err != nil {
@@ -138,12 +139,11 @@ GetGreetStatusAsync shows when the person was greeted last
 Limitation: currently only one successful return type is supported
 Show when the person was last greeted
 */
-func (a *Client) GetGreetStatusAsync(params *GetGreetStatusParams, cb func(string, *GetGreetStatusOK), sam swagsock.SubmitAsyncOption) (string, error) {
+func (a *Client) GetGreetStatusAsync(params *GetGreetStatusParams, cb func(string, *GetGreetStatusOK, error), sam swagsock.SubmitAsyncOption) (string, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewGetGreetStatusParams()
 	}
-
 	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
 		ID:                 "getGreetStatus",
 		Method:             "GET",
@@ -156,9 +156,11 @@ func (a *Client) GetGreetStatusAsync(params *GetGreetStatusParams, cb func(strin
 		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}, func(k string, v interface{}) {
-		value, ok := v.(*GetGreetStatusOK)
-		if ok {
-			cb(k, value)
+		switch value := v.(type) {
+		case *GetGreetStatusOK:
+			cb(k, value, nil)
+		case error:
+			cb(k, nil, value)
 		}
 	}, sam)
 	if err != nil {
@@ -208,12 +210,11 @@ GetGreetSummaryAsync shows who has been greeted
 Limitation: currently only one successful return type is supported
 Show who has been greeted
 */
-func (a *Client) GetGreetSummaryAsync(params *GetGreetSummaryParams, cb func(string, *GetGreetSummaryOK), sam swagsock.SubmitAsyncOption) (string, error) {
+func (a *Client) GetGreetSummaryAsync(params *GetGreetSummaryParams, cb func(string, *GetGreetSummaryOK, error), sam swagsock.SubmitAsyncOption) (string, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewGetGreetSummaryParams()
 	}
-
 	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
 		ID:                 "getGreetSummary",
 		Method:             "GET",
@@ -226,9 +227,11 @@ func (a *Client) GetGreetSummaryAsync(params *GetGreetSummaryParams, cb func(str
 		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}, func(k string, v interface{}) {
-		value, ok := v.(*GetGreetSummaryOK)
-		if ok {
-			cb(k, value)
+		switch value := v.(type) {
+		case *GetGreetSummaryOK:
+			cb(k, value, nil)
+		case error:
+			cb(k, nil, value)
 		}
 	}, sam)
 	if err != nil {
@@ -278,12 +281,11 @@ GreetAsync greets someone
 Limitation: currently only one successful return type is supported
 Greet someone
 */
-func (a *Client) GreetAsync(params *GreetParams, cb func(string, *GreetOK), sam swagsock.SubmitAsyncOption) (string, error) {
+func (a *Client) GreetAsync(params *GreetParams, cb func(string, *GreetOK, error), sam swagsock.SubmitAsyncOption) (string, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewGreetParams()
 	}
-
 	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
 		ID:                 "greet",
 		Method:             "POST",
@@ -296,9 +298,11 @@ func (a *Client) GreetAsync(params *GreetParams, cb func(string, *GreetOK), sam 
 		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}, func(k string, v interface{}) {
-		value, ok := v.(*GreetOK)
-		if ok {
-			cb(k, value)
+		switch value := v.(type) {
+		case *GreetOK:
+			cb(k, value, nil)
+		case error:
+			cb(k, nil, value)
 		}
 	}, sam)
 	if err != nil {
@@ -348,12 +352,11 @@ PingAsync pings the greeter service
 Limitation: currently only one successful return type is supported
 Ping the greeter service
 */
-func (a *Client) PingAsync(params *PingParams, cb func(string, *PingOK), sam swagsock.SubmitAsyncOption) (string, error) {
+func (a *Client) PingAsync(params *PingParams, cb func(string, *PingOK, error), sam swagsock.SubmitAsyncOption) (string, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewPingParams()
 	}
-
 	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
 		ID:                 "ping",
 		Method:             "GET",
@@ -366,9 +369,11 @@ func (a *Client) PingAsync(params *PingParams, cb func(string, *PingOK), sam swa
 		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}, func(k string, v interface{}) {
-		value, ok := v.(*PingOK)
-		if ok {
-			cb(k, value)
+		switch value := v.(type) {
+		case *PingOK:
+			cb(k, value, nil)
+		case error:
+			cb(k, nil, value)
 		}
 	}, sam)
 	if err != nil {
@@ -418,12 +423,11 @@ SubscribeAsync subscribes to the greeting events
 Limitation: currently only one successful return type is supported
 Subscribe to the greeteing events
 */
-func (a *Client) SubscribeAsync(params *SubscribeParams, cb func(string, *SubscribeOK), sam swagsock.SubmitAsyncOption) (string, error) {
+func (a *Client) SubscribeAsync(params *SubscribeParams, cb func(string, *SubscribeOK, error), sam swagsock.SubmitAsyncOption) (string, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewSubscribeParams()
 	}
-
 	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
 		ID:                 "subscribe",
 		Method:             "GET",
@@ -436,9 +440,11 @@ func (a *Client) SubscribeAsync(params *SubscribeParams, cb func(string, *Subscr
 		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}, func(k string, v interface{}) {
-		value, ok := v.(*SubscribeOK)
-		if ok {
-			cb(k, value)
+		switch value := v.(type) {
+		case *SubscribeOK:
+			cb(k, value, nil)
+		case error:
+			cb(k, nil, value)
 		}
 	}, sam)
 	if err != nil {
@@ -488,12 +494,11 @@ UnsubscribeAsync unsubscribes from the greeting events
 Limitation: currently only one successful return type is supported
 Unsubscribe from the greeting events
 */
-func (a *Client) UnsubscribeAsync(params *UnsubscribeParams, cb func(string, *UnsubscribeOK), sam swagsock.SubmitAsyncOption) (string, error) {
+func (a *Client) UnsubscribeAsync(params *UnsubscribeParams, cb func(string, *UnsubscribeOK, error), sam swagsock.SubmitAsyncOption) (string, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewUnsubscribeParams()
 	}
-
 	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
 		ID:                 "unsubscribe",
 		Method:             "DELETE",
@@ -506,9 +511,11 @@ func (a *Client) UnsubscribeAsync(params *UnsubscribeParams, cb func(string, *Un
 		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}, func(k string, v interface{}) {
-		value, ok := v.(*UnsubscribeOK)
-		if ok {
-			cb(k, value)
+		switch value := v.(type) {
+		case *UnsubscribeOK:
+			cb(k, value, nil)
+		case error:
+			cb(k, nil, value)
 		}
 	}, sam)
 	if err != nil {
@@ -558,12 +565,11 @@ UploadAsync uploads a greeting card
 Limitation: currently only one successful return type is supported
 Upload a greeting card
 */
-func (a *Client) UploadAsync(params *UploadParams, cb func(string, *UploadOK), sam swagsock.SubmitAsyncOption) (string, error) {
+func (a *Client) UploadAsync(params *UploadParams, cb func(string, *UploadOK, error), sam swagsock.SubmitAsyncOption) (string, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
 		params = NewUploadParams()
 	}
-
 	requid, err := a.transport.(swagsock.ClientTransport).SubmitAsync(&runtime.ClientOperation{
 		ID:                 "upload",
 		Method:             "POST",
@@ -576,9 +582,11 @@ func (a *Client) UploadAsync(params *UploadParams, cb func(string, *UploadOK), s
 		Context:            params.Context,
 		Client:             params.HTTPClient,
 	}, func(k string, v interface{}) {
-		value, ok := v.(*UploadOK)
-		if ok {
-			cb(k, value)
+		switch value := v.(type) {
+		case *UploadOK:
+			cb(k, value, nil)
+		case error:
+			cb(k, nil, value)
 		}
 	}, sam)
 	if err != nil {

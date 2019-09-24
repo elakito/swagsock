@@ -18,20 +18,20 @@ Make sure the greeter server is started (refer to https://github.com/elakito/swa
 
 To run the http client demo, run
 ----
-$ go run demo_client.go demo_common.go
+$ go run demo_client.go -disable
 ----
 
 To run the swaggersocket client demo, run
 ----
-$ go run demo_wsclient.go demo_common.go
+$ go run demo_client.go
 ----
 
-The swaggersocket client invokes the operations asynchronously and supports publish-subscribe operations.
+The swaggersocket client supports publish-subscribe operations in addition to the normal request-response operations. It invokes the operations asynchronously either using synchronous Submit or asynchronous SubmitAsync methods. The operations invoked via SubmitAsync are denoted by suffix '_a'.
 
 .Console
 ----
-$ go run demo_client.go demo_common.go
-demo_client invoking some operations at target_path http://localhost:8091/samples/greeter ...
+$ go run demo_client.go -disbale
+demo_client (swaggersocket false) invoking operations at target http://localhost:8091/samples/greeter ...
 Choose user ...
 user: foo
 foo> help
@@ -55,10 +55,8 @@ foo> summary
 res*: {"greeted":["foo"],"total":1}
 foo> 
 
-$ go run demo_client.go demo_common.go
-demo_client invoking some operations at target_path http://localhost:8091/samples/greeter ...
-$ go run demo_client.go demo_common.go
-demo_client invoking some operations at target_path http://localhost:8091/samples/greeter ...
+$ go run demo_client.go -disable
+demo_client (swaggersocket false) invoking operations at target http://localhost:8091/samples/greeter ...
 Choose user ...
 user: bar
 bar> ping
@@ -68,8 +66,8 @@ res*: {"from":"bar","name":"foo","text":"how are you?"}
 bar> 
 
 
-$ go run demo_wsclient.go demo_common.go
-demo_client invoking some operations at target_path ws://localhost:8091/samples/greeter ...
+$ go run demo_client.go
+demo_client (swaggersocket true) invoking operations at target ws://localhost:8091/samples/greeter ...
 Choose user ...
 user: foo
 foo> help
@@ -114,8 +112,8 @@ foo> unsubscribe_a 4
 res7: {"greeted":["foo","bar"],"total":6}
 foo> 
 
-$ go run demo_wsclient.go demo_common.go
-demo_client invoking some operations at target_path ws://localhost:8091/samples/greeter ...
+$ go run demo_client.go
+demo_client (swaggersocket true) invoking operations at target ws://localhost:8091/samples/greeter ...
 Choose user ...
 user: bar
 bar> ping_a
