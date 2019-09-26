@@ -92,8 +92,6 @@ estrella> Connected using websocket
 estrella> subscribe
 estrella> res0: {"code":200,"id":"0","type":"application/json"}[]
 estrella> res0: {"code":200,"id":"0","type":"application/json"}{"from":"elakito","name":"estrella","text":"hola estrella"}
-estrella> hola elakito hola elakito!
-Error: Uknown command: hola elakito hola elakito!
 estrella> greet elakito hola elakito!
 estrella> res1: {"code":200,"id":"1","type":"application/json"}{"from":"estrella","name":"elakito","text":"hola elakito!"}
 estrella> greet * hola a todos!!

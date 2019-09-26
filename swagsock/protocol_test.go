@@ -3,15 +3,24 @@ package swagsock
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
+	"sort"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/gorilla/websocket"
+
 	"github.com/go-openapi/runtime"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/elakito/swagsock/examples/greeter/models"
+	"github.com/elakito/swagsock/examples/greeter/restapi/operations"
 )
 
 var (
@@ -24,6 +33,7 @@ var (
 		`{"id": "125", "method": "POST", "path": "/topics/test",
 			"type": "application/vnd.kafka.binary.v1+json"}{"records":[{"value":"S2Fma2E="}]}`,
 		`{"id": "127", "code": 200, "type": "application/vnd.kafka.binary.v1+json"}[{"partition":0,"leader":0,"replicas":[{"broker":0,"leader":true,"in_sync":true}]}]`,
+		`{"id": "131", "method": "GET", "headers":{"x-shopping-ref":"4126"}, "path": "/shopping/bag"}`,
 	}
 	testMessageMaps = []map[string]interface{}{
 		map[string]interface{}{
@@ -43,16 +53,24 @@ var (
 			"code": 200,
 			"type": "application/vnd.kafka.binary.v1+json",
 		},
+		map[string]interface{}{
+			"id":      "131",
+			"method":  "GET",
+			"path":    "/shopping/bag",
+			"headers": map[string]interface{}{"x-shopping-ref": "4126"},
+		},
 	}
 	testMessageBodies = []string{
 		``,
 		`{"records":[{"value":"S2Fma2E="}]}`,
 		`[{"partition":0,"leader":0,"replicas":[{"broker":0,"leader":true,"in_sync":true}]}]`,
+		``,
 	}
 	testMessageIsRequest = []bool{
 		true,
 		true,
 		false,
+		true,
 	}
 
 	testContinuedMessageStrings = []string{
@@ -79,11 +97,36 @@ var (
 
 	testContinuedMessageBody = `{"records":[{"value":"S2Fma2E="}]}`
 
+	testInvalidMessageStrings = []string{
+		`{"id": "123", "method": "GET", invalid}`,
+	}
+
 	testHandshakeReqString     = `{"version":"2.0"}`
 	testHandshakeReqBadString  = `{"version":"1.0"}`
 	testHandshakeRespString    = `{"version":"2.0","trackingID":"b0cbb3b4-aaee-a63a-49ae-0d5a31af9c93"}`
 	testHandshakeRespBadString = `{"version":"2.0","error":"version_mismatch"}`
+
+	testHandshakeReqInvalidString = `{"version": invalid}`
 )
+
+func TestIsWebsocketUpgradeRequested(t *testing.T) {
+	req, _ := http.NewRequest("GET", "/v1/demo", nil)
+	assert.False(t, IsWebsocketUpgradeRequested(req))
+
+	req.Header.Add("Connection", "Upgrade")
+	req.Header.Add("Upgrade", "websocket")
+	req.Header.Add("Sec-WebSocket-Version", "13")
+	req.Header.Add("Sec-WebSocket-Key", "aZpgbJ4FWyDiKaQiZx3yvw==")
+	assert.True(t, IsWebsocketUpgradeRequested(req))
+}
+
+func TestGetBaseURI(t *testing.T) {
+	req, _ := http.NewRequest("GET", "/v1/service", nil)
+	assert.Equal(t, "/v1/service", getBaseURI(req))
+
+	req, _ = http.NewRequest("GET", "/v1/service/", nil)
+	assert.Equal(t, "/v1/service", getBaseURI(req))
+}
 
 func TestDefaultCodecEncode(t *testing.T) {
 	codec := NewDefaultCodec()
@@ -110,11 +153,20 @@ func TestDefaultCodecDecode(t *testing.T) {
 	}
 }
 
+func TestDefaultCodecDecodeInvalid(t *testing.T) {
+	codec := NewDefaultCodec()
+	for _, tmsgstr := range testInvalidMessageStrings {
+		_, _, err := codec.DecodeSwaggerSocketMessage([]byte(tmsgstr))
+		assert.NotNil(t, err, "Didn't Fail to decode '%s': %v", tmsgstr, err)
+	}
+}
+
 func TestCreateDefaultProtocolHandler(t *testing.T) {
 	conf := NewConfig()
 	ph, ok := CreateProtocolHandler(conf).(*protocolHandler)
 	assert.True(t, ok)
 	assert.NotNil(t, ph.codec)
+	assert.NotNil(t, ph.GetCodec())
 	assert.NotNil(t, ph.continued)
 	assert.NotNil(t, ph.mediator)
 }
@@ -150,6 +202,7 @@ func TestNewHTTPRequest(t *testing.T) {
 		assert.Equal(t, buildRequestKey("default", rid), GetRequestKey(req))
 	}
 }
+
 func TestHandshake(t *testing.T) {
 	conf := NewConfig()
 	ph, ok := CreateProtocolHandler(conf).(*protocolHandler)
@@ -157,13 +210,20 @@ func TestHandshake(t *testing.T) {
 	writer := &testConnectionWriter{}
 
 	// good handshake
-	ph.handshake([]byte(testHandshakeReqString), testTrackingID, writer)
+	err := ph.handshake([]byte(testHandshakeReqString), testTrackingID, writer)
+	assert.NoError(t, err)
 	assert.Equal(t, testHandshakeRespString, writer.data.String())
 
 	// bad handshake
 	writer.data.Reset()
-	ph.handshake([]byte(testHandshakeReqBadString), testTrackingID, writer)
+	err = ph.handshake([]byte(testHandshakeReqBadString), testTrackingID, writer)
+	assert.Error(t, err)
 	assert.Equal(t, testHandshakeRespBadString, writer.data.String())
+
+	// invalid handshake
+	writer.data.Reset()
+	err = ph.handshake([]byte(testHandshakeReqInvalidString), testTrackingID, writer)
+	assert.Error(t, err)
 }
 
 func TestServeNormal(t *testing.T) {
@@ -221,6 +281,79 @@ func TestServeContinued(t *testing.T) {
 	}
 }
 
+func TestServe(t *testing.T) {
+	conf := NewConfig()
+	conf.Heartbeat = 5
+	ph := CreateProtocolHandler(conf)
+	defer ph.Destroy()
+	hh := &testEchoHandler{mediator: conf.ResponseMediator}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ph.Serve(hh, w, r)
+	}))
+	defer ts.Close()
+
+	// Connect to the server
+	ws, _, err := websocket.DefaultDialer.Dial("ws"+ts.URL[4:]+"?x-tracking-id="+testTrackingID, nil)
+	defer ws.Close()
+	assert.NoError(t, err)
+
+	go func() {
+		ws.WriteMessage(websocket.TextMessage, []byte(`{"version":"2.0"}`))
+		ws.WriteMessage(websocket.TextMessage, []byte(`{"id":"1","method":"GET","path":"/v1/ping"}`))
+		ws.WriteMessage(websocket.TextMessage, []byte(`{"id":"2","method":"POST","path":"/v1/echo","type":"text/plain"}hola`))
+		ws.WriteMessage(websocket.TextMessage, []byte(`{"id":"3","method":"GET","path":"/v1/peek"}`))
+	}()
+
+	done := make(chan struct{})
+	step := 0
+	go func() {
+		defer func() {
+			done <- struct{}{}
+		}()
+		_, message, err := ws.ReadMessage()
+		assert.NoError(t, err)
+
+		var hresp HandshakeResponse
+		err = json.Unmarshal(message, &hresp)
+		assert.NoError(t, err)
+		assert.Equal(t, "2.0", hresp.Version)
+		assert.Equal(t, testTrackingID, hresp.TrackingID)
+		step++
+
+		_, message, err = ws.ReadMessage()
+		assert.Equal(t, `{"code":200,"id":"1","type":"application/json"}{"pong":0}`, string(message))
+		step++
+
+		_, message, err = ws.ReadMessage()
+		assert.Equal(t, `{"code":200,"id":"2","type":"application/json"}{"echo":"hola"}`, string(message))
+		step++
+
+		_, message, err = ws.ReadMessage()
+		assert.Equal(t, `{"code":404,"id":"3"}`, string(message))
+		step++
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		assert.Fail(t, "not all messages received at step %d", step)
+	}
+}
+
+func TestAddDeleteConnection(t *testing.T) {
+	conf := NewConfig()
+	ph, ok := CreateProtocolHandler(conf).(*protocolHandler)
+	assert.True(t, ok)
+	assert.Equal(t, 0, len(ph.connections))
+	c := &websocket.Conn{}
+	ph.addConnetion(c, "dummy")
+	assert.Equal(t, 1, len(ph.connections))
+	id := ph.deleteConnection(c)
+	assert.Equal(t, 0, len(ph.connections))
+	assert.Equal(t, "dummy", id)
+}
+
 func TestDefaultResponseMediator(t *testing.T) {
 	mediator := NewDefaultResponseMediator().(*defaultResponseMediator)
 	r1 := &testOK{}
@@ -238,6 +371,10 @@ func TestDefaultResponseMediator(t *testing.T) {
 	rr3 := mediator.Subscribe("bar#5", "orange", r3, nil, nil)
 	rr3.WriteResponse(w3, nil)
 
+	subscribed := mediator.Subscribed()
+	sort.Strings(subscribed)
+	assert.Equal(t, []string{"manzana", "naranja", "orange"}, subscribed)
+
 	mediator.Write("naranja", []byte("hola"))
 	mediator.Write("orange", []byte("hallo"))
 	mediator.Write("*", []byte("#swagger"))
@@ -251,6 +388,10 @@ func TestDefaultResponseMediator(t *testing.T) {
 	mediator.Write("manzana", []byte("bien"))
 	mediator.Write("*", []byte("hello"))
 
+	subscribed = mediator.Subscribed()
+	sort.Strings(subscribed)
+	assert.Equal(t, []string{"naranja", "orange"}, subscribed)
+
 	assert.Equal(t, "hihola#swaggeradioshello", w1.buf.String())
 	assert.Equal(t, "hi#swaggeradios", w2.buf.String())
 	assert.Equal(t, "hallo#swaggeradioshello", w3.buf.String())
@@ -259,6 +400,8 @@ func TestDefaultResponseMediator(t *testing.T) {
 	mediator.UnsubscribeAll("foo")
 	mediator.UnsubscribeAll("bar")
 	assert.Equal(t, 0, len(mediator.responders))
+	subscribed = mediator.Subscribed()
+	assert.Empty(t, subscribed)
 }
 
 func TestDefaultResponseMediatorTopics(t *testing.T) {
@@ -288,6 +431,13 @@ func TestDefaultResponseMediatorTopics(t *testing.T) {
 	rr5 := mediator.SubscribeTopic("bar#8", "private", "orange", r5, nil, nil)
 	rr5.WriteResponse(w5, nil)
 
+	subscribedtopics := mediator.SubscribedTopics()
+	sort.Strings(subscribedtopics)
+	assert.Equal(t, []string{"general", "private"}, subscribedtopics)
+	subscribed := mediator.SubscribedTopic("general")
+	sort.Strings(subscribed)
+	assert.Equal(t, []string{"manzana", "naranja", "orange"}, subscribed)
+
 	mediator.WriteTopic("general", []byte("hola"))
 	mediator.WriteTopic("general", []byte("hallo"))
 	mediator.WriteTopic("*", []byte("#swagger"))
@@ -303,6 +453,13 @@ func TestDefaultResponseMediatorTopics(t *testing.T) {
 	mediator.WriteTopic("private", []byte("bien"))
 	mediator.WriteTopic("*", []byte("hello"))
 
+	subscribedtopics = mediator.SubscribedTopics()
+	sort.Strings(subscribedtopics)
+	assert.Equal(t, []string{"general", "private"}, subscribedtopics)
+	subscribed = mediator.SubscribedTopic("general")
+	sort.Strings(subscribed)
+	assert.Equal(t, []string{"naranja", "orange"}, subscribed)
+
 	assert.Equal(t, "hihiholahallo#swaggeradioshello", w1.buf.String())
 	assert.Equal(t, "hihiholahallo#swaggeradios", w2.buf.String())
 	assert.Equal(t, "hiholahallo#swaggeradioshello", w3.buf.String())
@@ -313,6 +470,8 @@ func TestDefaultResponseMediatorTopics(t *testing.T) {
 	mediator.UnsubscribeAll("foo")
 	mediator.UnsubscribeAll("bar")
 	assert.Equal(t, 0, len(mediator.responders))
+	subscribed = mediator.SubscribedTopic("general")
+	assert.Empty(t, subscribed)
 }
 
 type testOK struct {
@@ -332,6 +491,22 @@ func (w *testWriter) Write(b []byte) (int, error) {
 	return w.buf.Write(b)
 }
 func (w *testWriter) WriteHeader(statusCode int) {
+}
+
+type testProducer struct {
+}
+
+func (p *testProducer) Produce(w io.Writer, b interface{}) error {
+	switch v := b.(type) {
+	case string:
+		w.Write([]byte(v))
+	case []byte:
+		w.Write(v)
+	default:
+		bv, _ := json.Marshal(v)
+		w.Write(bv)
+	}
+	return nil
 }
 
 type testHTTPHandler struct {
@@ -358,6 +533,46 @@ func (h *testHTTPHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			} else {
 				h.body.Write(b[0:n])
 			}
+		}
+	}
+}
+
+type testEchoHandler struct {
+	mediator ResponseMediator
+	count    int
+}
+
+func (h *testEchoHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	// this is a simplified test service with ping, echo, subscribe, unsubscribe and using echo for subscription
+	switch req.RequestURI {
+	case "/v1/ping":
+		resp.Header().Set("Content-Type", "application/json")
+		resp.WriteHeader(http.StatusOK)
+		resp.Write([]byte(fmt.Sprintf(`{"pong":%d}`, h.count)))
+		h.count++
+	case "/v1/echo":
+		resp.Header().Set("Content-Type", "application/json")
+		resp.WriteHeader(http.StatusOK)
+		b, _ := ioutil.ReadAll(req.Body)
+		pb := []byte(fmt.Sprintf(`{"from":"system","name":"everyone","text":"%s"}`, b))
+		h.mediator.Write("*", pb)
+		resp.Write([]byte(fmt.Sprintf(`{"echo":"%s"}`, b)))
+	default:
+		if strings.HasPrefix(req.RequestURI, "/v1/subscribe") {
+			user := req.RequestURI[len("/v1/subscribe")+1:]
+			payload := &models.GreetingReply{}
+			responder := h.mediator.Subscribe(GetRequestKey(req), user, operations.NewSubscribeOK().WithPayload(payload), nil, nil)
+			resp.Header().Set("Content-Type", "application/json")
+			resp.WriteHeader(http.StatusOK)
+			responder.WriteResponse(resp, &testProducer{})
+		} else if strings.HasPrefix(req.RequestURI, "/v1/unsubscribe") {
+			sid := req.RequestURI[len("/v1/unsubscribe")+1:]
+			h.mediator.Unsubscribe(GetRequestKey(req), sid)
+			resp.Header().Set("Content-Type", "application/json")
+			resp.WriteHeader(http.StatusOK)
+			resp.Write([]byte(`{"greeted":[]}`))
+		} else {
+			resp.WriteHeader(http.StatusNotFound)
 		}
 	}
 }

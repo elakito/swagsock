@@ -320,8 +320,28 @@ func (m *callbackResponse) isSticky() bool {
 	return m.sticky
 }
 
-// a copy of the package private runtime.request (used now until figured out how everything can be integrated)
+//
+// a copy of the package private go-openapi/runtime/runtime/client/request is included below as there is no public method
+// to instantiate this instance and no public method to access some methods which are needed to customize the protocol binding.
+//
+// func newRequest(method, pathPattern string, writer runtime.ClientRequestWriter) (*request, error)
+//
+// request.writer.WriteRequest
+// request.query.Encode()
+// request.payload
+//
 //////////////////// DO NOT EDIT THIS PART
+func newRequest(method, pathPattern string, writer runtime.ClientRequestWriter) (*request, error) {
+	return &request{
+		pathPattern: pathPattern,
+		method:      method,
+		writer:      writer,
+		header:      make(http.Header),
+		query:       make(url.Values),
+		timeout:     client.DefaultTimeout,
+	}, nil
+}
+
 type request struct {
 	pathPattern string
 	method      string

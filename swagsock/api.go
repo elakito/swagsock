@@ -123,10 +123,10 @@ func (o SubmitAsyncOption) Param() string {
 }
 
 // SubmitAsyncOptionNone represents no specific option
-const SubmitAsyncOptionNone = ""
+const SubmitAsyncOptionNone SubmitAsyncOption = ""
 
 // SubmitAsyncOptionSubscribe represents the subscription option
-const SubmitAsyncOptionSubscribe = "subscribe"
+const SubmitAsyncOptionSubscribe SubmitAsyncOption = "subscribe"
 
 // SubmitAsyncOptionUnsubscribe represents the unsubscription option to unsubscribe from the specified subscription id
 func SubmitAsyncOptionUnsubscribe(sid string) SubmitAsyncOption {
