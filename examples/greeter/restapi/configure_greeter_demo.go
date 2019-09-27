@@ -153,7 +153,7 @@ func setupGlobalMiddleware(handler http.Handler) http.Handler {
 // The globalMiddleware uses the swaggersocket handler to handle websocket requests
 func globalMiddleware(handler http.Handler) http.Handler {
 
-	// instantiate the protocol handler
+	// instantiate the swaggersocket protocol handler
 	conf := swagsock.NewConfig()
 	conf.Heartbeat = 5
 	conf.Log = log.New(os.Stdout, "[swagsocket] ", log.LstdFlags)
