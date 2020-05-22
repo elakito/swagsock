@@ -104,11 +104,12 @@ type SubmitAsyncOption string
 
 // Is tests if this option is of the specified mode
 func (o SubmitAsyncOption) Is(mode SubmitAsyncMode) bool {
-	if o == SubmitAsyncOptionNone {
+	switch o {
+	case SubmitAsyncOptionNone:
 		return mode == SubmitAsyncModeNone
-	} else if o == SubmitAsyncOptionSubscribe {
+	case SubmitAsyncOptionSubscribe:
 		return mode == SubmitAsyncModeSubscribe
-	} else {
+	default:
 		return mode == SubmitAsyncModeUnsubscribe
 	}
 }

@@ -30,15 +30,15 @@ func TestSubmitAsyncOptionParam(t *testing.T) {
 
 func TestHandshakeJson(t *testing.T) {
 	hreq := &HandshakeRequest{Version: "2.0"}
-	b, _ := json.Marshal(hreq)
+	b, _ := json.Marshal(hreq) //nolint:errcheck
 	assert.Equal(t, `{"version":"2.0"}`, string(b))
-	json.Unmarshal(b, &hreq)
+	json.Unmarshal(b, &hreq) //nolint:errcheck
 	assert.Equal(t, "2.0", hreq.Version)
 
 	hresp := &HandshakeResponse{Version: "2.0", TrackingID: "b0cbb3b4-aaee-a63a-49ae-0d5a31af9c93"}
-	b, _ = json.Marshal(hresp)
+	b, _ = json.Marshal(hresp) //nolint:errcheck
 	assert.Equal(t, `{"version":"2.0","trackingID":"b0cbb3b4-aaee-a63a-49ae-0d5a31af9c93"}`, string(b))
-	json.Unmarshal(b, &hresp)
+	json.Unmarshal(b, &hresp) //nolint:errcheck
 	assert.Equal(t, "2.0", hresp.Version)
 	assert.Equal(t, "b0cbb3b4-aaee-a63a-49ae-0d5a31af9c93", hresp.TrackingID)
 

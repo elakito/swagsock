@@ -126,6 +126,20 @@ func (ph *protocolHandler) Serve(handler http.Handler, w http.ResponseWriter, r 
 		ph.mediator.UnsubscribeAll(trackingID)
 		return nil
 	})
+	if ph.heartbeat > 0 {
+		heartbeatwait := time.Duration(ph.heartbeat*2) * time.Second
+		if err = conn.SetReadDeadline(time.Now().Add(heartbeatwait)); err != nil {
+			ph.log.Printf("Failed to set heartbeat deadline: %s", err.Error())
+		}
+
+		conn.SetPongHandler(func(string) error {
+			if err = conn.SetReadDeadline(time.Now().Add(heartbeatwait)); err != nil {
+				ph.log.Printf("Failed to set heartbeat deadline: %s", err.Error())
+			}
+			return nil
+		})
+	}
+
 	connlock := &sync.Mutex{}
 	baseURI := getBaseURI(r)
 	trackingID := getTrackingID(r)
@@ -145,7 +159,10 @@ func (ph *protocolHandler) Serve(handler http.Handler, w http.ResponseWriter, r 
 			for {
 				select {
 				case <-ticker.C:
-					conn.WriteControl(websocket.PingMessage, []byte{}, time.Time{})
+					if err = conn.WriteControl(websocket.PingMessage, []byte{}, time.Time{}); err != nil {
+						// this could just be a temporary heartbeat ping failure
+						ph.log.Printf("Failed to ping: %s", err.Error())
+					}
 				case <-heartbeatstop:
 					return
 				}
@@ -154,7 +171,7 @@ func (ph *protocolHandler) Serve(handler http.Handler, w http.ResponseWriter, r 
 	}
 
 	var handshaked bool
-	go func(tid string) {
+	go func() {
 		for {
 			mt, p, err := conn.ReadMessage()
 			if err != nil {
@@ -173,7 +190,7 @@ func (ph *protocolHandler) Serve(handler http.Handler, w http.ResponseWriter, r 
 		if heartbeatstop != nil {
 			heartbeatstop <- struct{}{}
 		}
-	}(trackingID)
+	}()
 
 }
 
@@ -196,10 +213,14 @@ func (ph *protocolHandler) handshake(p []byte, trackingID string, conn connectio
 		return err
 	}
 	if hr.Version != ProtocolVersion {
-		conn.WriteJSON(&HandshakeResponse{Version: ProtocolVersion, Error: "version_mismatch"})
+		if err := conn.WriteJSON(&HandshakeResponse{Version: ProtocolVersion, Error: "version_mismatch"}); err != nil {
+			ph.log.Printf("Failed to write the handshake response: %s", err.Error())
+		}
 		return errVersionMismatch
 	}
-	conn.WriteJSON(&HandshakeResponse{Version: ProtocolVersion, TrackingID: trackingID})
+	if err := conn.WriteJSON(&HandshakeResponse{Version: ProtocolVersion, TrackingID: trackingID}); err != nil {
+		ph.log.Printf("Failed to write the handshake response: %s", err.Error())
+	}
 	return nil
 }
 
@@ -221,13 +242,19 @@ func (ph *protocolHandler) serve(handler http.Handler, baseURI string, trackingI
 			resp := newHTTPResponse(rid, mtype, conn, connlock, ph.codec)
 			handler.ServeHTTP(resp, req)
 		}()
-		cwriter.Write(body)
+		if _, err = cwriter.Write(body); err != nil {
+			ph.log.Printf("Failed to write the first part: %s", err.Error())
+		}
 	} else if ok {
 		// for one of the subsequent segments of a continued series, write the data to its writer
-		cwriter.Write(body)
+		if _, err = cwriter.Write(body); err != nil {
+			ph.log.Printf("Failed to write a subsequent part: %s", err.Error())
+		}
 		if !cont {
 			// delete the cwriter
-			cwriter.Close()
+			if err = cwriter.Close(); err != nil {
+				ph.log.Printf("Failed to close the writer: %s", err.Error())
+			}
 			delete(ph.continued, rid)
 		}
 	} else {
@@ -384,7 +411,8 @@ func (m *defaultResponseMediator) write(name string, data []byte) {
 	for _, r := range m.responders {
 		if name == "*" || name == r.name {
 			if _, err := r.Write(data); err != nil {
-				// log error
+				// log error TODO use the cofigured logger instead
+				defaultLogger.Printf("failed to write: %s", err.Error())
 			}
 		}
 	}
@@ -402,14 +430,16 @@ func (m *defaultResponseMediator) writeTopic(topic string, data []byte) {
 		for _, ss := range m.topicsubs {
 			for s := range ss {
 				if _, err := m.responders[s].Write(data); err != nil {
-					// log error
+					// log error TODO use the cofigured logger instead
+					defaultLogger.Printf("failed to write: %s", err.Error())
 				}
 			}
 		}
 	} else if ss, ok := m.topicsubs[topic]; ok {
 		for s := range ss {
 			if _, err := m.responders[s].Write(data); err != nil {
-				// log error
+				// log error TODO use the cofigured logger instead
+				defaultLogger.Printf("failed to write: %s", err.Error())
 			}
 		}
 	}
@@ -417,7 +447,7 @@ func (m *defaultResponseMediator) writeTopic(topic string, data []byte) {
 
 func newHTTPRequest(baseURI string, trackingID string, rid string, headers map[string]interface{}, body io.Reader) *http.Request {
 	uri := fmt.Sprintf("%s%s", baseURI, getStringHeader(headers, "path"))
-	req, _ := http.NewRequest(getStringHeader(headers, "method"), uri, body)
+	req, _ := http.NewRequest(getStringHeader(headers, "method"), uri, body) //nolint:errcheck
 	req.RequestURI = uri
 	req.Header.Add(headerRequestKey, buildRequestKey(trackingID, rid))
 	copyHeaderToHTTPHeaders(headers, "type", req.Header, "Content-Type")
@@ -463,9 +493,14 @@ func (r *responseWriter) Header() http.Header {
 
 func (r *responseWriter) Write(body []byte) (int, error) {
 	// flush the buffer when the content-type header is not set
-	data, _ := r.codec.EncodeSwaggerSocketMessage(r.buildHeaders(), body)
+	data, err := r.codec.EncodeSwaggerSocketMessage(r.buildHeaders(), body)
+	if err != nil {
+		return 0, err
+	}
 	r.connlock.Lock()
-	r.conn.WriteMessage(r.messageType, data)
+	if err = r.conn.WriteMessage(r.messageType, data); err != nil {
+		return 0, err
+	}
 	r.connlock.Unlock()
 	return len(body), nil
 }
@@ -476,7 +511,10 @@ func (r *responseWriter) WriteHeader(code int) {
 	if ctype == "" {
 		// flush the buffer when the content-type header is not set
 		data, _ := r.codec.EncodeSwaggerSocketMessage(r.buildHeaders(), nil)
-		r.conn.WriteMessage(r.messageType, data)
+		if err := r.conn.WriteMessage(r.messageType, data); err != nil {
+			// TODO use the cofigured logger instead
+			defaultLogger.Printf("Failed to flush the buffer: %s", err.Error())
+		}
 	}
 }
 
@@ -601,9 +639,15 @@ func (r *ReusableResponder) WriteResponse(rw http.ResponseWriter, producer runti
 	r.responder.WriteResponse(rw, producer)
 	if r.hello != nil {
 		if r.topic == "" {
-			r.mediator.Write("*", r.hello)
+			if err := r.mediator.Write("*", r.hello); err != nil {
+				// TODO use the cofigured logger instead
+				defaultLogger.Printf("Failed to broadcast hello to subscribers: %s", err.Error())
+			}
 		} else {
-			r.mediator.WriteTopic("*", r.hello)
+			if err := r.mediator.WriteTopic("*", r.hello); err != nil {
+				// TODO use the cofigured logger instead
+				defaultLogger.Printf("Failed to broadcast hello to topics: %s", err.Error())
+			}
 		}
 	}
 }

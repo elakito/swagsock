@@ -42,7 +42,9 @@ func NewTransport(url string) ClientTransport {
 		runtime.DefaultMime: runtime.ByteStreamProducer(),
 	}
 
-	t.connect()
+	if err := t.connect(); err != nil {
+		log.Printf("failed to connect: %s", err.Error())
+	}
 	return t
 }
 
@@ -67,8 +69,10 @@ func (t *wstransport) connect() error {
 	if err != nil {
 		return err
 	}
+	// connected
 	t.conn = c
 	if err := t.conn.WriteJSON(&HandshakeRequest{Version: ProtocolVersion}); err != nil {
+		t.Close()
 		return err
 	}
 	go func() {
@@ -176,7 +180,10 @@ func (t *wstransport) Submit(operation *runtime.ClientOperation) (interface{}, e
 	fresp := newFutureResponse(reqid)
 	t.putAsyncResponse(reqid, fresp)
 
-	t.writeMessage(rawmessage)
+	err = t.writeMessage(rawmessage)
+	if err != nil {
+		return nil, err
+	}
 
 	// TODO make the timeout for the synchronous response configurable
 	response, err := fresp.Get(5 * time.Second)
@@ -212,7 +219,10 @@ func (t *wstransport) SubmitAsync(operation *runtime.ClientOperation, cb func(st
 	}, sao.Is(SubmitAsyncModeSubscribe))
 	t.putAsyncResponse(reqid, fresp)
 
-	t.writeMessage(rawmessage)
+	err = t.writeMessage(rawmessage)
+	if err != nil {
+		return "", err
+	}
 	return reqid, nil
 }
 

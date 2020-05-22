@@ -36,24 +36,24 @@ var (
 		`{"id": "131", "method": "GET", "headers":{"x-shopping-ref":"4126"}, "path": "/shopping/bag"}`,
 	}
 	testMessageMaps = []map[string]interface{}{
-		map[string]interface{}{
+		{
 			"id":     "123",
 			"method": "GET",
 			"path":   "/ws/consumers/my_group/instances/my_instance/topics/my_topic",
 			"accept": "application/vnd.kafka.json.v1+json",
 		},
-		map[string]interface{}{
+		{
 			"id":     "125",
 			"method": "POST",
 			"path":   "/topics/test",
 			"type":   "application/vnd.kafka.binary.v1+json",
 		},
-		map[string]interface{}{
+		{
 			"id":   "127",
 			"code": 200,
 			"type": "application/vnd.kafka.binary.v1+json",
 		},
-		map[string]interface{}{
+		{
 			"id":      "131",
 			"method":  "GET",
 			"path":    "/shopping/bag",
@@ -110,7 +110,7 @@ var (
 )
 
 func TestIsWebsocketUpgradeRequested(t *testing.T) {
-	req, _ := http.NewRequest("GET", "/v1/demo", nil)
+	req, _ := http.NewRequest("GET", "/v1/demo", nil) //nolint:errcheck
 	assert.False(t, IsWebsocketUpgradeRequested(req))
 
 	req.Header.Add("Connection", "Upgrade")
@@ -121,10 +121,10 @@ func TestIsWebsocketUpgradeRequested(t *testing.T) {
 }
 
 func TestGetBaseURI(t *testing.T) {
-	req, _ := http.NewRequest("GET", "/v1/service", nil)
+	req, _ := http.NewRequest("GET", "/v1/service", nil) //nolint:errcheck
 	assert.Equal(t, "/v1/service", getBaseURI(req))
 
-	req, _ = http.NewRequest("GET", "/v1/service/", nil)
+	req, _ = http.NewRequest("GET", "/v1/service/", nil) //nolint:errcheck
 	assert.Equal(t, "/v1/service", getBaseURI(req))
 }
 
@@ -192,7 +192,8 @@ func TestNewHTTPRequest(t *testing.T) {
 		if !testMessageIsRequest[i] {
 			continue
 		}
-		headers, body, _ := codec.DecodeSwaggerSocketMessage([]byte(tmsgstr))
+		headers, body, err := codec.DecodeSwaggerSocketMessage([]byte(tmsgstr))
+		assert.NoError(t, err)
 		rid := getStringHeader(headers, "id")
 		req := newHTTPRequest("/test", "default", rid, headers, bytes.NewReader(body))
 		mmap := testMessageMaps[i]
@@ -295,9 +296,10 @@ func TestServe(t *testing.T) {
 
 	// Connect to the server
 	ws, _, err := websocket.DefaultDialer.Dial("ws"+ts.URL[4:]+"?x-tracking-id="+testTrackingID, nil)
-	defer ws.Close()
+	defer ws.Close() //nolint:staticcheck
 	assert.NoError(t, err)
 
+	//nolint:errcheck
 	go func() {
 		ws.WriteMessage(websocket.TextMessage, []byte(`{"version":"2.0"}`))
 		ws.WriteMessage(websocket.TextMessage, []byte(`{"id":"1","method":"GET","path":"/v1/ping"}`))
@@ -321,15 +323,15 @@ func TestServe(t *testing.T) {
 		assert.Equal(t, testTrackingID, hresp.TrackingID)
 		step++
 
-		_, message, err = ws.ReadMessage()
+		_, message, _ = ws.ReadMessage() //nolint:errcheck
 		assert.Equal(t, `{"code":200,"id":"1","type":"application/json"}{"pong":0}`, string(message))
 		step++
 
-		_, message, err = ws.ReadMessage()
+		_, message, _ = ws.ReadMessage() //nolint:errcheck
 		assert.Equal(t, `{"code":200,"id":"2","type":"application/json"}{"echo":"hola"}`, string(message))
 		step++
 
-		_, message, err = ws.ReadMessage()
+		_, message, _ = ws.ReadMessage() //nolint:errcheck
 		assert.Equal(t, `{"code":404,"id":"3"}`, string(message))
 		step++
 	}()
@@ -375,9 +377,9 @@ func TestDefaultResponseMediator(t *testing.T) {
 	sort.Strings(subscribed)
 	assert.Equal(t, []string{"manzana", "naranja", "orange"}, subscribed)
 
-	mediator.Write("naranja", []byte("hola"))
-	mediator.Write("orange", []byte("hallo"))
-	mediator.Write("*", []byte("#swagger"))
+	mediator.Write("naranja", []byte("hola")) //nolint:errcheck
+	mediator.Write("orange", []byte("hallo")) //nolint:errcheck
+	mediator.Write("*", []byte("#swagger"))   //nolint:errcheck
 
 	assert.Equal(t, "hihola#swagger", w1.buf.String())
 	assert.Equal(t, "hi#swagger", w2.buf.String())
@@ -385,8 +387,8 @@ func TestDefaultResponseMediator(t *testing.T) {
 	assert.Equal(t, 3, len(mediator.responders))
 
 	mediator.Unsubscribe("bar#10", "2")
-	mediator.Write("manzana", []byte("bien"))
-	mediator.Write("*", []byte("hello"))
+	mediator.Write("manzana", []byte("bien")) //nolint:errcheck
+	mediator.Write("*", []byte("hello"))      //nolint:errcheck
 
 	subscribed = mediator.Subscribed()
 	sort.Strings(subscribed)
@@ -438,9 +440,9 @@ func TestDefaultResponseMediatorTopics(t *testing.T) {
 	sort.Strings(subscribed)
 	assert.Equal(t, []string{"manzana", "naranja", "orange"}, subscribed)
 
-	mediator.WriteTopic("general", []byte("hola"))
-	mediator.WriteTopic("general", []byte("hallo"))
-	mediator.WriteTopic("*", []byte("#swagger"))
+	mediator.WriteTopic("general", []byte("hola"))  //nolint:errcheck
+	mediator.WriteTopic("general", []byte("hallo")) //nolint:errcheck
+	mediator.WriteTopic("*", []byte("#swagger"))    //nolint:errcheck
 
 	assert.Equal(t, "hihiholahallo#swagger", w1.buf.String())
 	assert.Equal(t, "hihiholahallo#swagger", w2.buf.String())
@@ -450,8 +452,8 @@ func TestDefaultResponseMediatorTopics(t *testing.T) {
 	assert.Equal(t, 5, len(mediator.responders))
 
 	mediator.Unsubscribe("bar#10", "2")
-	mediator.WriteTopic("private", []byte("bien"))
-	mediator.WriteTopic("*", []byte("hello"))
+	mediator.WriteTopic("private", []byte("bien")) //nolint:errcheck
+	mediator.WriteTopic("*", []byte("hello"))      //nolint:errcheck
 
 	subscribedtopics = mediator.SubscribedTopics()
 	sort.Strings(subscribedtopics)
@@ -497,6 +499,7 @@ type testProducer struct {
 }
 
 func (p *testProducer) Produce(w io.Writer, b interface{}) error {
+	//nolint:errcheck
 	switch v := b.(type) {
 	case string:
 		w.Write([]byte(v))
@@ -544,6 +547,7 @@ type testEchoHandler struct {
 
 func (h *testEchoHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	// this is a simplified test service with ping, echo, subscribe, unsubscribe and using echo for subscription
+	//nolint:errcheck
 	switch req.RequestURI {
 	case "/v1/ping":
 		resp.Header().Set("Content-Type", "application/json")

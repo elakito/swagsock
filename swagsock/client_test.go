@@ -110,7 +110,7 @@ func TestClient(t *testing.T) {
 	assert.Equal(t, 1, len(conf.ResponseMediator.Subscribed()))
 
 	// echo after subscribed
-	rid, err = client.EchoAsync(NewEchoParams().WithBody("hola"), func(reqid string, r *EchoOK, e error) {
+	_, err = client.EchoAsync(NewEchoParams().WithBody("hola"), func(reqid string, r *EchoOK, e error) {
 	}, SubmitAsyncOptionNone)
 	assert.Nil(t, err)
 
@@ -124,7 +124,7 @@ func TestClient(t *testing.T) {
 	assert.Equal(t, "hola", resvals[1].Text)
 
 	// unsubscribe
-	rid, err = client.UnsubscribeAsync(NewUnsubscribeParams().WithSid(subid), func(reqid string, r *UnsubscribeOK, e error) {
+	_, err = client.UnsubscribeAsync(NewUnsubscribeParams().WithSid(subid), func(reqid string, r *UnsubscribeOK, e error) {
 		resid = reqid
 		received <- struct{}{}
 	}, SubmitAsyncOptionUnsubscribe(subid))
@@ -370,35 +370,6 @@ func NewEchoParams() *EchoParams {
 	}
 }
 
-// NewEchoParamsWithTimeout creates a new EchoParams object
-// with the default values initialized, and the ability to set a timeout on a request
-func NewEchoParamsWithTimeout(timeout time.Duration) *EchoParams {
-	var ()
-	return &EchoParams{
-
-		timeout: timeout,
-	}
-}
-
-// NewEchoParamsWithContext creates a new EchoParams object
-// with the default values initialized, and the ability to set a context for a request
-func NewEchoParamsWithContext(ctx context.Context) *EchoParams {
-	var ()
-	return &EchoParams{
-
-		Context: ctx,
-	}
-}
-
-// NewEchoParamsWithHTTPClient creates a new EchoParams object
-// with the default values initialized, and the ability to set a custom HTTPClient for a request
-func NewEchoParamsWithHTTPClient(client *http.Client) *EchoParams {
-	var ()
-	return &EchoParams{
-		HTTPClient: client,
-	}
-}
-
 /*EchoParams contains all the parameters to send to the API endpoint
 for the echo operation typically these are written to a http.Request
 */
@@ -488,35 +459,6 @@ func NewPingParams() *PingParams {
 	}
 }
 
-// NewPingParamsWithTimeout creates a new PingParams object
-// with the default values initialized, and the ability to set a timeout on a request
-func NewPingParamsWithTimeout(timeout time.Duration) *PingParams {
-
-	return &PingParams{
-
-		timeout: timeout,
-	}
-}
-
-// NewPingParamsWithContext creates a new PingParams object
-// with the default values initialized, and the ability to set a context for a request
-func NewPingParamsWithContext(ctx context.Context) *PingParams {
-
-	return &PingParams{
-
-		Context: ctx,
-	}
-}
-
-// NewPingParamsWithHTTPClient creates a new PingParams object
-// with the default values initialized, and the ability to set a custom HTTPClient for a request
-func NewPingParamsWithHTTPClient(client *http.Client) *PingParams {
-
-	return &PingParams{
-		HTTPClient: client,
-	}
-}
-
 /*PingParams contains all the parameters to send to the API endpoint
 for the ping operation typically these are written to a http.Request
 */
@@ -581,35 +523,6 @@ func NewSubscribeParams() *SubscribeParams {
 	return &SubscribeParams{
 
 		timeout: cr.DefaultTimeout,
-	}
-}
-
-// NewSubscribeParamsWithTimeout creates a new SubscribeParams object
-// with the default values initialized, and the ability to set a timeout on a request
-func NewSubscribeParamsWithTimeout(timeout time.Duration) *SubscribeParams {
-	var ()
-	return &SubscribeParams{
-
-		timeout: timeout,
-	}
-}
-
-// NewSubscribeParamsWithContext creates a new SubscribeParams object
-// with the default values initialized, and the ability to set a context for a request
-func NewSubscribeParamsWithContext(ctx context.Context) *SubscribeParams {
-	var ()
-	return &SubscribeParams{
-
-		Context: ctx,
-	}
-}
-
-// NewSubscribeParamsWithHTTPClient creates a new SubscribeParams object
-// with the default values initialized, and the ability to set a custom HTTPClient for a request
-func NewSubscribeParamsWithHTTPClient(client *http.Client) *SubscribeParams {
-	var ()
-	return &SubscribeParams{
-		HTTPClient: client,
 	}
 }
 
@@ -700,35 +613,6 @@ func NewUnsubscribeParams() *UnsubscribeParams {
 	return &UnsubscribeParams{
 
 		timeout: cr.DefaultTimeout,
-	}
-}
-
-// NewUnsubscribeParamsWithTimeout creates a new UnsubscribeParams object
-// with the default values initialized, and the ability to set a timeout on a request
-func NewUnsubscribeParamsWithTimeout(timeout time.Duration) *UnsubscribeParams {
-	var ()
-	return &UnsubscribeParams{
-
-		timeout: timeout,
-	}
-}
-
-// NewUnsubscribeParamsWithContext creates a new UnsubscribeParams object
-// with the default values initialized, and the ability to set a context for a request
-func NewUnsubscribeParamsWithContext(ctx context.Context) *UnsubscribeParams {
-	var ()
-	return &UnsubscribeParams{
-
-		Context: ctx,
-	}
-}
-
-// NewUnsubscribeParamsWithHTTPClient creates a new UnsubscribeParams object
-// with the default values initialized, and the ability to set a custom HTTPClient for a request
-func NewUnsubscribeParamsWithHTTPClient(client *http.Client) *UnsubscribeParams {
-	var ()
-	return &UnsubscribeParams{
-		HTTPClient: client,
 	}
 }
 
